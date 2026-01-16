@@ -1,0 +1,175 @@
+# =============================================================================
+# AI Newsletter Configuration
+# =============================================================================
+# Environment variable overrides use the NEWSLETTER_ prefix with double
+# underscores for nested values:
+#   NEWSLETTER_LLM__PROVIDER=anthropic
+#   NEWSLETTER_EMAIL__SMTP_PASSWORD=your-password
+# =============================================================================
+
+# -- LLM Settings -------------------------------------------------------------
+# provider: "ollama" (local, free), "anthropic" (Claude), or "openai" (GPT)
+# model: model name for the chosen provider
+# fallbacks: ordered list of fallback providers if the primary fails
+# max_tokens_per_article: token budget per article summary
+# max_daily_cost_usd: safety cap on daily LLM API spend (cloud providers only)
+# temperature: 0.0 = deterministic, 1.0 = creative
+# batch_size: number of articles processed per LLM call
+# concurrent_requests: max parallel LLM requests (keep at 1 for Ollama)
+llm:
+  provider: "ollama"
+  model: "qwen3.5:4b"
+  fallbacks: []
+  max_tokens_per_article: 500
+  max_daily_cost_usd: 2.00
+  temperature: 0.3
+  batch_size: 5
+  concurrent_requests: 1
+
+# -- Email Delivery ------------------------------------------------------------
+# provider: "resend" (API), "gmail" (SMTP with App Password), "smtp" (generic),
+#           or "console" (dev mode — logs emails to stdout)
+# from_address: display name and email for outgoing digests
+# smtp_password: set via NEWSLETTER_EMAIL__SMTP_PASSWORD in config/.env
+email:
+  provider: "gmail"
+  from_address: "Your Name <your-email@example.com>"
+  smtp_host: "smtp.gmail.com"
+  smtp_port: 587
+  smtp_username: "your-email@example.com"
+  # smtp_password: set via NEWSLETTER_EMAIL__SMTP_PASSWORD in config/.env
+
+# -- Schedule (UTC, 24-hour format) -------------------------------------------
+# fetch: when to run all data fetchers
+# process: when to run LLM summarization on new raw articles
+# auto_send: when to build and send daily digests to all users
+schedule:
+  fetch_hour: 6
+  fetch_minute: 0
+  process_hour: 6
+  process_minute: 30
+  auto_send_hour: 15   # 15:00 UTC = 9:00 AM CST
+  auto_send_minute: 0
+
+# -- Database ------------------------------------------------------------------
+# Auto-configured to data/newsletter.db (absolute path).
+# Uncomment to override:
+# database:
+#   url: "sqlite:////absolute/path/to/db"
+
+# -- RSS Feeds ----------------------------------------------------------------
+# Each feed needs a unique name (used as source_name in the database) and URL.
+# Names starting with common prefixes (techcrunch, venturebeat, etc.) are
+# grouped under "rss" for source weight scoring.
+rss_feeds:
+  - name: "techcrunch_ai"
+    url: "https://techcrunch.com/category/artificial-intelligence/feed/"
+  - name: "venturebeat_ai"
+    url: "https://venturebeat.com/category/ai/feed/"
+  - name: "mit_tech_review_ai"
+    url: "https://www.technologyreview.com/topic/artificial-intelligence/feed/"
+  - name: "the_verge_ai"
+    url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+  - name: "openai_blog"
+    url: "https://openai.com/news/rss.xml"
+  - name: "deepmind_blog"
+    url: "https://deepmind.google/blog/rss.xml"
+  - name: "huggingface_blog"
+    url: "https://huggingface.co/blog/feed.xml"
+  - name: "meta_ai_blog"
+    url: "https://engineering.fb.com/category/ml-applications/feed/"
+
+# -- arXiv ---------------------------------------------------------------------
+# categories: arXiv category codes to search (cs.AI, cs.CL, cs.CV, cs.LG)
+# max_results: maximum papers to fetch per run
+arxiv:
+  categories:
+    - "cs.AI"
+    - "cs.CL"
+    - "cs.CV"
+    - "cs.LG"
+  max_results: 100
+
+# -- Reddit --------------------------------------------------------------------
+# Requires NEWSLETTER_REDDIT_CLIENT_ID and NEWSLETTER_REDDIT_CLIENT_SECRET
+# subreddits: list of subreddit names (without r/ prefix)
+# min_score: minimum upvote score to include a post
+# limit: max posts per subreddit per fetch
+reddit:
+  subreddits:
+    - "MachineLearning"
+    - "artificial"
+    - "LocalLLaMA"
+  min_score: 10
+  limit: 25
+
+# -- Twitter/X -----------------------------------------------------------------
+# Requires NEWSLETTER_TWITTER_BEARER_TOKEN (API v2)
+# query: Twitter search query syntax
+# max_results: max tweets per fetch (API max is 100)
+twitter:
+  query: "(AI OR \"machine learning\" OR LLM OR \"large language model\") lang:en -is:retweet"
+  max_results: 50
+
+# -- Topics --------------------------------------------------------------------
+# Grouped by category. These are the tags the LLM assigns to each article.
+# Users select from these during onboarding. Used for topic_match scoring.
+topics:
+  research:
+    - "NLP"
+    - "Computer Vision"
+    - "Reinforcement Learning"
+    - "ML Theory"
+    - "AI Safety"
+    - "Multimodal"
+    - "Robotics"
+    - "AI Agents"
+  industry:
+    - "LLM APIs"
+    - "AI Infrastructure"
+    - "AI Startups"
+    - "Enterprise AI"
+    - "AI Regulation"
+    - "Fundraising"
+  applied:
+    - "Open Source Models"
+    - "AI Art"
+    - "AI Coding Tools"
+    - "AI Hardware"
+    - "Tutorials"
+  general:
+    - "General AI"
+
+# -- Role Defaults -------------------------------------------------------------
+# Default topic selections and source weights for each user role.
+# Applied during onboarding as preselected values.
+# source_weights: 0-10 scale, where 5 = neutral baseline.
+#   >5 boosts articles from that source; <5 suppresses them.
+role_defaults:
+  student:
+    topics: ["NLP", "Computer Vision", "Reinforcement Learning", "ML Theory", "AI Safety", "Open Source Models", "Tutorials"]
+    source_weights:
+      arxiv: 10
+      huggingface: 9
+      reddit: 7
+      rss: 5
+      twitter: 4
+      github: 6
+  industry:
+    topics: ["LLM APIs", "AI Infrastructure", "AI Startups", "Enterprise AI", "AI Regulation", "Fundraising"]
+    source_weights:
+      rss: 10
+      twitter: 9
+      github: 7
+      reddit: 5
+      arxiv: 4
+      huggingface: 5
+  enthusiast:
+    topics: ["NLP", "Open Source Models", "AI Art", "AI Coding Tools", "AI Agents", "Robotics"]
+    source_weights:
+      reddit: 8
+      rss: 7
+      huggingface: 7
+      github: 7
+      arxiv: 6
+      twitter: 6
