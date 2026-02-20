@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F7F7F5; margin: 0; padding: 20px; color: #1A3C2B; }
+        .container { max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 16px rgba(26,60,43,0.06); }
+
+        /* Header */
+        .header { background: #1A3C2B; padding: 28px 32px 24px; }
+        .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .brand-icon { width: 28px; height: 28px; background: #FF8C69; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: white; }
+        .brand-name { font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px; }
+        .header-date { font-size: 13px; color: #9EFFBF; margin: 0; font-weight: 500; }
+
+        /* Greeting */
+        .greeting { padding: 28px 32px 20px; border-bottom: 1px solid #eee; }
+        .greeting h2 { margin: 0 0 6px; font-size: 20px; font-weight: 600; color: #1A3C2B; }
+        .greeting p { margin: 0; font-size: 14px; color: #1A3C2B; opacity: 0.55; line-height: 1.5; }
+        .witty { font-style: italic; color: #FF8C69; opacity: 1; }
+
+        /* Section labels */
+        .section-label { padding: 20px 32px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #1A3C2B; opacity: 0.35; }
+
+        /* Section divider */
+        .section-divider { padding: 24px 32px 0; }
+        .section-divider hr { border: none; border-top: 1px solid #eee; margin: 0; }
+
+        /* Featured article (first in each section) */
+        .article-featured { padding: 0 32px 24px; }
+        .article-featured .article-inner { background: #F7F7F5; border-radius: 10px; padding: 20px; border-left: 4px solid #FF8C69; }
+        .article-featured .article-source { background: #FF8C69; color: white; }
+        .article-featured .article-title { font-size: 17px; }
+
+        /* Regular articles */
+        .article { padding: 16px 32px; border-bottom: 1px solid #f0f0f0; }
+        .article:last-child { border-bottom: none; }
+
+        /* Article elements */
+        .article-source { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; background: #1A3C2B; color: #9EFFBF; margin-bottom: 8px; }
+        .article-num { display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: #1A3C2B; color: #9EFFBF; font-size: 11px; font-weight: 700; text-align: center; line-height: 22px; margin-right: 8px; flex-shrink: 0; }
+        .article-title { font-size: 15px; font-weight: 600; color: #1A3C2B; text-decoration: none; line-height: 1.4; display: block; margin-bottom: 8px; }
+        .article-title:hover { color: #FF8C69; }
+        .article-summary { font-size: 13.5px; color: #1A3C2B; opacity: 0.65; line-height: 1.65; margin: 0 0 10px; }
+        .article-topics { margin-top: 0; }
+        .topic-tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 500; background: #F7F7F5; color: #1A3C2B; opacity: 0.5; margin-right: 3px; margin-bottom: 3px; }
+
+        /* Explore section */
+        .explore-divider { padding: 24px 32px 0; }
+        .explore-divider hr { border: none; border-top: 2px dashed #9EFFBF; margin: 0; }
+        .explore-header { padding: 16px 32px 8px; }
+        .explore-header h3 { margin: 0; font-size: 14px; font-weight: 700; color: #1A3C2B; }
+        .explore-header p { margin: 4px 0 0; font-size: 12px; color: #1A3C2B; opacity: 0.4; }
+        .article-explore { padding: 12px 32px; border-bottom: 1px solid #f5f5f5; }
+        .article-explore:last-child { border-bottom: none; }
+        .article-explore .article-title { font-size: 14px; font-weight: 500; }
+        .article-explore .article-summary { font-size: 12.5px; }
+
+        /* Footer */
+        .footer { padding: 24px 32px; background: #1A3C2B; text-align: center; }
+        .footer p { margin: 4px 0; font-size: 12px; color: #ffffff; opacity: 0.5; }
+        .footer a { color: #9EFFBF; text-decoration: none; font-weight: 500; }
+        .footer a:hover { text-decoration: underline; }
+        .footer .unsub { margin-top: 12px; font-size: 11px; opacity: 0.35; }
+        .footer .unsub a { color: #ffffff; opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header with branding -->
+        <div class="header">
+            <div class="brand">
+                <div class="brand-icon">&#9737;</div>
+                <span class="brand-name">The AI Signal</span>
+            </div>
+            <p class="header-date">{{ date }} &bull; Curated for {{ user.role | capitalize }}s ({{ user.level | capitalize }})</p>
+        </div>
+
+        <!-- Personalized greeting -->
+        <div class="greeting">
+            <h2>Good morning, {{ user.name or 'there' }}.</h2>
+            <p>Welcome to your daily digest with The AI Signal. <span class="witty">{{ witty_remark }}</span></p>
+        </div>
+
+        <!-- ═══ NEWS SECTION ═══ -->
+        {% if articles %}
+        <div class="section-label">&#128240; News &amp; Industry</div>
+
+        {% for item in articles %}
+        {% if loop.first %}
+        <div class="article-featured">
+            <div class="article-inner">
+                <span class="article-source">{{ item.source_name }}</span>
+                <a href="{{ click_url(item.id, 'news') }}" class="article-title">{{ item.title }}</a>
+                {% if item.summary %}
+                <p class="article-summary">{{ item.summary }}</p>
+                {% endif %}
+                {% if item.topics %}
+                <div class="article-topics">
+                    {% for topic in item.topics %}
+                    <span class="topic-tag">{{ topic }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="article">
+            <span class="article-source">{{ item.source_name }}</span>
+            <a href="{{ click_url(item.id, 'news') }}" class="article-title">
+                <span class="article-num">{{ loop.index }}</span>{{ item.title }}
+            </a>
+            {% if item.summary %}
+            <p class="article-summary">{{ item.summary }}</p>
+            {% endif %}
+            {% if item.topics %}
+            <div class="article-topics">
+                {% for topic in item.topics %}
+                <span class="topic-tag">{{ topic }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+
+        <!-- ═══ PAPERS & REPOS SECTION ═══ -->
+        {% if research_articles %}
+        <div class="section-divider"><hr></div>
+        <div class="section-label">&#128218; Papers &amp; Repos</div>
+
+        {% for item in research_articles %}
+        {% if loop.first %}
+        <div class="article-featured">
+            <div class="article-inner">
+                <span class="article-source">{{ item.source_name }}</span>
+                <a href="{{ click_url(item.id, 'research') }}" class="article-title">{{ item.title }}</a>
+                {% if item.summary %}
+                <p class="article-summary">{{ item.summary }}</p>
+                {% endif %}
+                {% if item.topics %}
+                <div class="article-topics">
+                    {% for topic in item.topics %}
+                    <span class="topic-tag">{{ topic }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="article">
+            <span class="article-source">{{ item.source_name }}</span>
+            <a href="{{ click_url(item.id, 'research') }}" class="article-title">
+                <span class="article-num">{{ loop.index }}</span>{{ item.title }}
+            </a>
+            {% if item.summary %}
+            <p class="article-summary">{{ item.summary }}</p>
+            {% endif %}
+            {% if item.topics %}
+            <div class="article-topics">
+                {% for topic in item.topics %}
+                <span class="topic-tag">{{ topic }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+
+        <!-- ═══ EXPLORE MORE SECTION ═══ -->
+        {% if explore_articles %}
+        <div class="explore-divider"><hr></div>
+        <div class="explore-header">
+            <h3>&#128161; Explore More</h3>
+            <p>Picked by our exploration engine &mdash; expand your signal</p>
+        </div>
+
+        {% for item in explore_articles %}
+        <div class="article-explore">
+            <span class="article-source">{{ item.source_name }}</span>
+            <a href="{{ click_url(item.id, 'explore') }}" class="article-title">{{ item.title }}</a>
+            {% if item.summary %}
+            <p class="article-summary">{{ item.summary }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>You're receiving this as a {{ user.role | capitalize }} ({{ user.level | capitalize }}) subscriber.</p>
+            <p><a href="{{ base_url }}/profile">Manage preferences</a> &middot; <a href="{{ base_url }}/feed">Open feed</a></p>
+            <p class="unsub"><a href="{{ unsub_url }}">Unsubscribe</a></p>
+        </div>
+    </div>
+</body>
+</html>
