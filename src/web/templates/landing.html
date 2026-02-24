@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% block title %}The AI Signal — Your Daily AI Intelligence{% endblock %}
+
+{% block nav %}
+<!-- Landing page has its own transparent nav -->
+<nav class="bg-forest text-cream">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-8">
+            <a href="/" class="font-heading font-bold text-lg tracking-tight flex items-center gap-2">
+                <iconify-icon icon="lucide:radio" class="text-coral text-xl"></iconify-icon>
+                The AI Signal
+            </a>
+            <div class="hidden md:flex items-center gap-6 text-sm">
+                <a href="/feed" class="text-cream/70 hover:text-cream transition">Feed</a>
+                {% if user is defined and user and user.is_admin %}
+                <a href="/review" class="text-cream/70 hover:text-cream transition">Review</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="flex items-center gap-4 text-sm">
+            {% if user is defined and user %}
+            <div class="relative" id="user-dropdown">
+                <button onclick="document.getElementById('dropdown-menu').classList.toggle('hidden')"
+                        class="flex items-center gap-2 text-cream/80 hover:text-cream transition">
+                    <span>{{ user.name or user.email }}</span>
+                    <iconify-icon icon="lucide:chevron-down" class="text-xs"></iconify-icon>
+                </button>
+                <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded shadow-lg border border-forest/10 py-1 z-50">
+                    <div class="px-4 py-2 border-b border-forest/10">
+                        <span class="source-badge px-2 py-0.5 rounded border border-forest/15 text-forest/60 whitespace-nowrap">{{ user.role | capitalize }} / {{ user.level | capitalize }}</span>
+                    </div>
+                    <a href="/profile" class="block px-4 py-2 text-sm text-forest hover:bg-cream transition">
+                        <iconify-icon icon="lucide:user" class="mr-2 align-middle"></iconify-icon>
+                        Profile
+                    </a>
+                    <form method="post" action="/logout">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                        <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-coral hover:bg-cream transition">
+                            <iconify-icon icon="lucide:log-out" class="mr-2 align-middle"></iconify-icon>
+                            Log Out
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <a href="/login" class="text-cream/70 hover:text-cream transition">Login</a>
+            <a href="/signup" class="bg-coral text-white px-5 py-2 rounded font-medium hover:bg-coral-dark transition">
+                Get Started
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block main_class %}{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="bg-forest text-cream">
+    <div class="max-w-7xl mx-auto px-6 pt-16 pb-24">
+        <div class="grid md:grid-cols-2 gap-16 items-center">
+            <div>
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="source-badge px-3 py-1 rounded border border-cream/20 text-cream/60">
+                        DAILY INTELLIGENCE
+                    </span>
+                    <div class="w-8 h-[1px] bg-coral"></div>
+                </div>
+                <h1 class="text-5xl md:text-6xl font-heading font-bold headline-tracking leading-tight mb-6">
+                    Cut through<br>
+                    the <span class="text-coral">AI noise</span>.
+                </h1>
+                <p class="text-cream/70 text-lg leading-relaxed mb-8 max-w-lg">
+                    A personalized daily digest of what actually matters in AI. Research papers, industry news, open-source releases, and community discussions — filtered and summarized for your specific role and expertise level.
+                </p>
+
+                <!-- Email signup CTA -->
+                <form action="/signup" method="get" class="flex gap-3 max-w-md">
+                    <input type="email" name="email" placeholder="your@email.com" required
+                        class="flex-1 bg-forest-light border border-cream/20 rounded px-4 py-3 text-cream placeholder-cream/40 focus:outline-none focus:border-coral transition font-body">
+                    <button type="submit" class="bg-coral text-white px-6 py-3 rounded font-heading font-semibold hover:bg-coral-dark transition whitespace-nowrap">
+                        Get Started
+                    </button>
+                </form>
+                <p class="text-cream/40 text-sm mt-3">Free and open source. No spam, ever.</p>
+            </div>
+
+            <div class="hidden md:block relative">
+                <!-- Decorative card stack -->
+                <div class="relative">
+                    <!-- Spinning circle decoration -->
+                    <div class="absolute -top-8 -right-4 w-32 h-32 border border-dashed border-cream/20 rounded-full animate-spin-slow"></div>
+
+                    <!-- Sample article card -->
+                    <div class="corner-marker-coral bg-forest-light border border-cream/10 rounded-lg p-6 mb-4 relative z-10">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="source-badge px-2 py-0.5 rounded bg-coral/20 text-coral">ARXIV</span>
+                            <span class="text-cream/40 text-xs">2 hours ago</span>
+                        </div>
+                        <h3 class="font-heading font-semibold text-cream mb-2">FlashAttention-3: Fast Exact Attention with Asymptotically Optimal IO Complexity</h3>
+                        <p class="text-cream/50 text-sm">Achieves 2x throughput over FA2 via warp-level pipelining on Hopper architecture...</p>
+                        <div class="flex gap-2 mt-3">
+                            <span class="topic-pill px-2 py-0.5 rounded bg-mint/10 text-mint">NLP</span>
+                            <span class="topic-pill px-2 py-0.5 rounded bg-gold/10 text-gold">ML Theory</span>
+                        </div>
+                    </div>
+
+                    <!-- Second card (offset) -->
+                    <div class="bg-forest-light border border-cream/10 rounded-lg p-6 ml-8 relative z-0 -mt-2">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="source-badge px-2 py-0.5 rounded bg-mint/20 text-mint">REDDIT</span>
+                            <span class="text-cream/40 text-xs">4 hours ago</span>
+                        </div>
+                        <h3 class="font-heading font-semibold text-cream mb-2">Open-source alternative to GPT-4 Vision for document processing</h3>
+                        <p class="text-cream/50 text-sm">A new multimodal model that can parse invoices, forms, and handwritten notes...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats bar -->
+<section class="bg-cream border-y border-forest/10">
+    <div class="max-w-7xl mx-auto px-6 py-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div>
+                <div class="font-heading font-bold text-2xl text-forest">8+</div>
+                <div class="text-sm text-forest/60 mt-1">Sources Monitored</div>
+            </div>
+            <div>
+                <div class="font-heading font-bold text-2xl text-forest">1000+</div>
+                <div class="text-sm text-forest/60 mt-1">Articles Daily</div>
+            </div>
+            <div>
+                <div class="font-heading font-bold text-2xl text-forest">3</div>
+                <div class="text-sm text-forest/60 mt-1">Summary Styles</div>
+            </div>
+            <div>
+                <div class="font-heading font-bold text-2xl text-forest">9</div>
+                <div class="text-sm text-forest/60 mt-1">Personalization Levels</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Topics Grid Section -->
+<section id="topics" class="bg-cream py-20">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-12">
+            <span class="source-badge px-3 py-1 rounded border border-forest/20 text-forest/60">COVERAGE AREAS</span>
+            <h2 class="font-heading font-bold text-3xl md:text-4xl text-forest mt-4 headline-tracking">
+                Every angle. One digest.
+            </h2>
+            <p class="text-forest/60 mt-3 max-w-2xl mx-auto">From bleeding-edge research to practical tools, we cover the full AI landscape and let you pick what matters.</p>
+        </div>
+
+        <div class="grid md:grid-cols-4 gap-0">
+            <!-- Research -->
+            <div class="grid-border p-8 group hover:bg-forest/[0.02] transition">
+                <div class="w-12 h-12 rounded-lg bg-coral/10 flex items-center justify-center mb-4 group-hover:bg-coral/20 transition">
+                    <iconify-icon icon="lucide:flask-conical" class="text-coral text-xl"></iconify-icon>
+                </div>
+                <h3 class="font-heading font-semibold text-forest text-lg mb-2">Research</h3>
+                <p class="text-forest/60 text-sm leading-relaxed mb-4">arXiv papers, HuggingFace daily papers, GitHub trending repos. Stay on the cutting edge.</p>
+                <div class="flex flex-wrap gap-1">
+                    <span class="topic-pill px-2 py-0.5 rounded bg-forest/5 text-forest/50">NLP</span>
+                    <span class="topic-pill px-2 py-0.5 rounded bg-forest/5 text-forest/50">CV</span>
+                    <span class="topic-pill px-2 py-0.5 rounded bg-forest/5 text-forest/50">RL</span>
+                    <span class="topic-pill px-2 py-0.5 rounded bg-forest/5 text-forest/50">Safety</span>
+                </div>
+            </div>
+
+            <!-- Industry -->
+            <div class="grid-border p-8 group hover:bg-forest/[0.02] transition">
+                <div class="w-12 h-12 rounded-lg bg-mint/20 flex items-center justify-center mb-4 group-hover:bg-mint/30 transition">
+                    <iconify-icon icon="lucide:trending-up" class="text-forest text-xl"></iconify-icon>
+                </div>
+                <h3 class="font-heading font-semibold text-forest text-lg mb-2">Industry</h3>
+                <p class="text-forest/60 text-sm leading-relaxed mb-4">TechCrunch, VentureBeat, company blogs. Product launches, funding, and market shifts.</p>
+                <div class="flex flex-wrap gap-1">
+                    <span class="topic-pill px-2 py-0.5 rounded bg-forest/5 text-forest/50">APIs</span>
+                    <span class="topic-pill px-2 py-0.5 rounded bg-forest/5 text-forest/50">Infra</span>
+                    <span class="topic-pill px-2 py-0.5 rounded bg-forest/5 text-forest/50">Startups</span>
+                </div>
+            </div>
+
+            <!-- Community -->
+            <div class="grid-border p-8 group hover:bg-forest/[0.02] transition">
+                <div class="w-12 h-12 rounded-lg bg-gold/20 flex items-center justify-center mb-4 group-hover:bg-gold/30 transition">
+                    <iconify-icon icon="lucide:users" class="text-forest text-xl"></iconify-icon>
+                </div>
+                <h3 class="font-heading font-semibold text-forest text-lg mb-2">Community</h3>
+                <p class="text-forest/60 text-sm leading-relaxed mb-4">Reddit, Twitter/X. What practitioners are actually talking about.</p>
+                <div class="flex flex-wrap gap-1">
+                    <span class="topic-pill px-2 py-0.5 rounded bg-forest/5 text-forest/50">Discussion</span>
+                    <span class="topic-pill px-2 py-0.5 rounded bg-forest/5 text-forest/50">Trends</span>
+                </div>
+            </div>
+
+            <!-- Code & Tools -->
+            <div class="grid-border p-8 group hover:bg-forest/[0.02] transition">
+                <div class="w-12 h-12 rounded-lg bg-coral/10 flex items-center justify-center mb-4 group-hover:bg-coral/20 transition">
+                    <iconify-icon icon="lucide:code-2" class="text-coral text-xl"></iconify-icon>
+                </div>
+                <h3 class="font-heading font-semibold text-forest text-lg mb-2">Code & Tools</h3>
+                <p class="text-forest/60 text-sm leading-relaxed mb-4">GitHub trending repos, open-source releases. Hands-on tools you can use today.</p>
+                <div class="flex flex-wrap gap-1">
+                    <span class="topic-pill px-2 py-0.5 rounded bg-forest/5 text-forest/50">Open Source</span>
+                    <span class="topic-pill px-2 py-0.5 rounded bg-forest/5 text-forest/50">Models</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section id="about" class="bg-forest text-cream py-20">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-12">
+            <span class="source-badge px-3 py-1 rounded border border-cream/20 text-cream/60">HOW IT WORKS</span>
+            <h2 class="font-heading font-bold text-3xl md:text-4xl mt-4 headline-tracking">
+                Personalized to <span class="text-coral">your</span> needs.
+            </h2>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Step 1 -->
+            <div class="corner-marker-coral p-8">
+                <div class="font-mono text-coral text-sm mb-4">01</div>
+                <h3 class="font-heading font-semibold text-xl mb-3">Pick Your Role</h3>
+                <p class="text-cream/60 leading-relaxed">Are you a <span class="text-mint">student</span> reading papers, an <span class="text-gold">industry</span> professional shipping products, or an <span class="text-coral">enthusiast</span> staying informed? Your role shapes your summaries.</p>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="corner-marker-coral p-8">
+                <div class="font-mono text-coral text-sm mb-4">02</div>
+                <h3 class="font-heading font-semibold text-xl mb-3">Set Your Level</h3>
+                <p class="text-cream/60 leading-relaxed">Beginner, intermediate, or advanced — we adapt jargon, depth, and complexity. No condescension, no confusion.</p>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="corner-marker-coral p-8">
+                <div class="font-mono text-coral text-sm mb-4">03</div>
+                <h3 class="font-heading font-semibold text-xl mb-3">Get Your Signal</h3>
+                <p class="text-cream/60 leading-relaxed">A daily digest with AI-generated summaries tailored to you. Browse the full feed anytime, or read the curated email in 5 minutes.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="bg-cream py-20">
+    <div class="max-w-3xl mx-auto px-6 text-center">
+        <h2 class="font-heading font-bold text-3xl md:text-4xl text-forest headline-tracking mb-4">
+            Ready to tune in?
+        </h2>
+        <p class="text-forest/60 text-lg mb-8">Join and start receiving your personalized AI intelligence briefing.</p>
+        <form action="/signup" method="get" class="flex gap-3 max-w-md mx-auto">
+            <input type="email" name="email" placeholder="your@email.com" required
+                class="flex-1 border border-forest/20 rounded px-4 py-3 bg-white text-forest placeholder-forest/30 focus:outline-none focus:border-coral transition font-body">
+            <button type="submit" class="bg-forest text-cream px-6 py-3 rounded font-heading font-semibold hover:bg-forest-light transition whitespace-nowrap">
+                Sign Up Free
+            </button>
+        </form>
+        <p class="text-forest/40 text-sm mt-3">
+            Or <a href="/feed" class="text-coral hover:underline">browse the public feed</a> first.
+        </p>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="bg-forest text-cream/60 py-12 border-t border-cream/10">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-2">
+                <iconify-icon icon="lucide:radio" class="text-coral text-lg"></iconify-icon>
+                <span class="font-heading font-semibold text-cream">The AI Signal</span>
+            </div>
+            <div class="flex items-center gap-6 text-sm">
+                <a href="/feed" class="hover:text-cream transition">Feed</a>
+                <a href="/login" class="hover:text-cream transition">Login</a>
+                <a href="/signup" class="hover:text-cream transition">Sign Up</a>
+            </div>
+            <div class="flex items-center gap-4">
+                <iconify-icon icon="mdi:github" class="text-lg hover:text-cream cursor-pointer transition"></iconify-icon>
+                <iconify-icon icon="pajamas:twitter" class="text-lg hover:text-cream cursor-pointer transition"></iconify-icon>
+            </div>
+        </div>
+    </div>
+</footer>
+{% endblock %}

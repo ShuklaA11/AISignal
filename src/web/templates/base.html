@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}The AI Signal{% endblock %}</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Tailwind + Custom Config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    cream: '#F7F7F5',
+                    forest: { DEFAULT: '#1A3C2B', light: '#2A5C42', dark: '#0F2419' },
+                    coral: { DEFAULT: '#FF8C69', light: '#FFB099', dark: '#E06040' },
+                    mint: { DEFAULT: '#9EFFBF', light: '#C5FFD9', dark: '#6EDD99' },
+                    gold: { DEFAULT: '#F4D35E', light: '#F8E48E', dark: '#D4B030' },
+                },
+                fontFamily: {
+                    heading: ['"Space Grotesk"', 'sans-serif'],
+                    body: ['"Inter"', 'sans-serif'],
+                    mono: ['"JetBrains Mono"', 'monospace'],
+                },
+            },
+        },
+    }
+    </script>
+
+    <!-- CSRF meta tag for HTMX -->
+    <meta name="csrf-token" content="{{ csrf_token(request) }}">
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Iconify -->
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+
+    <!-- Design System CSS -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-heading { font-family: 'Space Grotesk', sans-serif; }
+
+        /* Corner markers */
+        .corner-marker {
+            position: relative;
+        }
+        .corner-marker::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            width: 16px;
+            height: 16px;
+            border-top: 2px solid #1A3C2B;
+            border-left: 2px solid #1A3C2B;
+        }
+        .corner-marker::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            right: -1px;
+            width: 16px;
+            height: 16px;
+            border-bottom: 2px solid #1A3C2B;
+            border-right: 2px solid #1A3C2B;
+        }
+        .corner-marker-coral::before {
+            border-color: #FF8C69;
+        }
+        .corner-marker-coral::after {
+            border-color: #FF8C69;
+        }
+
+        /* Grid border aesthetic */
+        .grid-border {
+            border: 1px dashed #d4d4d4;
+        }
+
+        /* Spin animation for decorative circles */
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spin-slow 20s linear infinite;
+        }
+
+        /* Editorial headline tracking */
+        .headline-tracking {
+            letter-spacing: -0.03em;
+        }
+
+        /* HTMX transitions */
+        [hx-swap-oob] { transition: all 0.3s ease; }
+        .htmx-settling { opacity: 0.8; }
+        .htmx-request { opacity: 0.7; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #F7F7F5; }
+        ::-webkit-scrollbar-thumb { background: #1A3C2B; border-radius: 3px; }
+
+        /* Source badges */
+        .source-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Topic pills */
+        .topic-pill {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+        }
+
+        /* Range slider styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            height: 4px;
+            border-radius: 2px;
+            background: #d4d4d4;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #1A3C2B;
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #1A3C2B;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Checkbox styling */
+        .signal-checkbox {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #1A3C2B;
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .signal-checkbox:checked {
+            background: #1A3C2B;
+        }
+        .signal-checkbox:checked::after {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 1px;
+            width: 6px;
+            height: 10px;
+            border: solid #F7F7F5;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-cream min-h-screen">
+    <!-- Nav -->
+    {% block nav %}
+    <nav class="bg-forest text-cream border-b border-forest-light">
+        <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-8">
+                <a href="/" class="font-heading font-bold text-lg tracking-tight flex items-center gap-2">
+                    <iconify-icon icon="lucide:radio" class="text-coral text-xl"></iconify-icon>
+                    The AI Signal
+                </a>
+                <div class="hidden md:flex items-center gap-6 text-sm">
+                    <a href="/feed" class="text-cream/80 hover:text-cream transition">Feed</a>
+                    {% if user is defined and user and user.is_admin %}
+                    <a href="/review" class="text-cream/80 hover:text-cream transition">Review</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="flex items-center gap-4 text-sm">
+                {% if user is defined and user %}
+                <div class="relative" id="user-dropdown">
+                    <button onclick="document.getElementById('dropdown-menu').classList.toggle('hidden')"
+                            class="flex items-center gap-2 text-cream/80 hover:text-cream transition">
+                        <span>{{ user.name or user.email }}</span>
+                        <iconify-icon icon="lucide:chevron-down" class="text-xs"></iconify-icon>
+                    </button>
+                    <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded shadow-lg border border-forest/10 py-1 z-50">
+                        <div class="px-4 py-2 border-b border-forest/10">
+                            <span class="source-badge px-2 py-0.5 rounded border border-forest/15 text-forest/60 whitespace-nowrap">{{ user.role | capitalize }} / {{ user.level | capitalize }}</span>
+                        </div>
+                        <a href="/profile" class="block px-4 py-2 text-sm text-forest hover:bg-cream transition">
+                            <iconify-icon icon="lucide:user" class="mr-2 align-middle"></iconify-icon>
+                            Profile
+                        </a>
+                        <a href="/analytics" class="block px-4 py-2 text-sm text-forest hover:bg-cream transition">
+                            <iconify-icon icon="lucide:bar-chart-3" class="mr-2 align-middle"></iconify-icon>
+                            Analytics
+                        </a>
+                        <form method="post" action="/logout">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                            <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-coral hover:bg-cream transition">
+                                <iconify-icon icon="lucide:log-out" class="mr-2 align-middle"></iconify-icon>
+                                Log Out
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <a href="/login" class="text-cream/80 hover:text-cream transition">Login</a>
+                <a href="/signup" class="bg-coral text-white px-4 py-1.5 rounded font-medium hover:bg-coral-dark transition text-sm">
+                    Sign Up
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    {% endblock %}
+
+    {% include "partials/verification_banner.html" ignore missing %}
+
+    <main class="{% block main_class %}max-w-7xl mx-auto px-6 py-8{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}{% endblock %}
+    <script>
+    // Send CSRF token with all HTMX requests
+    document.body.addEventListener('htmx:configRequest', function(evt) {
+        var csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) {
+            evt.detail.headers['x-csrf-token'] = csrfToken.getAttribute('content');
+        }
+    });
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        var dropdown = document.getElementById('user-dropdown');
+        var menu = document.getElementById('dropdown-menu');
+        if (dropdown && menu && !dropdown.contains(e.target)) {
+            menu.classList.add('hidden');
+        }
+    });
+    </script>
+</body>
+</html>
