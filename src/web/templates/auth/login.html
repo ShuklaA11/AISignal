@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Login — The AI Signal{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto mt-16">
+    <div class="text-center mb-8">
+        <iconify-icon icon="lucide:radio" class="text-coral text-3xl mb-3"></iconify-icon>
+        <h1 class="font-heading font-bold text-3xl text-forest headline-tracking">Welcome back</h1>
+        <p class="text-forest/50 mt-2">Sign in to your AI Signal account.</p>
+    </div>
+    <div class="corner-marker bg-white rounded-lg p-8">
+        {% if error %}
+        <div class="bg-coral/10 text-coral-dark p-3 rounded mb-4 text-sm font-medium">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="/login" class="space-y-5">
+            {{ csrf_input(request) | safe }}
+            <div>
+                <label class="block text-sm font-medium text-forest/70 mb-1.5">Email</label>
+                <input type="email" name="email" required
+                    class="w-full border border-forest/20 rounded px-4 py-2.5 bg-cream focus:outline-none focus:border-coral transition text-forest placeholder-forest/30"
+                    placeholder="your@email.com">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-forest/70 mb-1.5">Password</label>
+                <input type="password" name="password" required
+                    class="w-full border border-forest/20 rounded px-4 py-2.5 bg-cream focus:outline-none focus:border-coral transition text-forest placeholder-forest/30"
+                    placeholder="Enter your password">
+            </div>
+            <div class="text-right -mt-2">
+                <a href="/forgot-password" class="text-sm text-coral hover:text-coral-dark transition">Forgot password?</a>
+            </div>
+            <button type="submit" class="w-full bg-forest text-cream rounded py-2.5 font-heading font-semibold hover:bg-forest-light transition">
+                Sign In
+            </button>
+        </form>
+        <p class="text-sm text-forest/40 mt-6 text-center">
+            Don't have an account? <a href="/signup" class="text-coral hover:text-coral-dark font-medium transition">Sign up</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

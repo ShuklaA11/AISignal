@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Email Verified — The AI Signal{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto mt-16">
+    <div class="text-center mb-8">
+        <iconify-icon icon="lucide:check-circle" class="text-mint-dark text-5xl mb-3"></iconify-icon>
+        <h1 class="font-heading font-bold text-3xl text-forest headline-tracking">Email Verified!</h1>
+        <p class="text-forest/50 mt-2">Your email address has been successfully verified.</p>
+    </div>
+    <div class="corner-marker bg-white rounded-lg p-8 text-center">
+        <p class="text-forest mb-6">You can now access all features of The AI Signal.</p>
+        <a href="/feed" class="inline-block bg-forest text-cream rounded py-2.5 px-8 font-heading font-semibold hover:bg-forest-light transition">
+            Go to Feed
+        </a>
+    </div>
+</div>
+{% endblock %}
