@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Choose Your Role — The AI Signal{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto mt-12">
+    <div class="text-center mb-10">
+        <div class="flex items-center justify-center gap-2 mb-4">
+            <span class="source-badge px-3 py-1 rounded border border-forest/20 text-forest/50">STEP 1 OF 4</span>
+        </div>
+        <h1 class="font-heading font-bold text-3xl text-forest headline-tracking">What best describes you?</h1>
+        <p class="text-forest/50 mt-2">This personalizes your content and summary style.</p>
+    </div>
+
+    <form method="post" action="/onboarding/role" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {{ csrf_input(request) | safe }}
+        <!-- Student -->
+        <label class="cursor-pointer">
+            <input type="radio" name="role" value="student" class="sr-only peer" required>
+            <div class="corner-marker bg-white rounded-lg p-6 text-center hover:shadow-sm peer-checked:shadow-md transition
+                        border-2 border-transparent peer-checked:border-coral">
+                <div class="w-14 h-14 rounded-lg bg-coral/10 flex items-center justify-center mx-auto mb-4">
+                    <iconify-icon icon="lucide:graduation-cap" class="text-coral text-2xl"></iconify-icon>
+                </div>
+                <h3 class="font-heading font-semibold text-forest text-lg">Student</h3>
+                <p class="text-sm text-forest/50 mt-2">Studying ML/AI, reading papers, building projects. Get technical summaries with methodology details.</p>
+            </div>
+        </label>
+
+        <!-- Industry -->
+        <label class="cursor-pointer">
+            <input type="radio" name="role" value="industry" class="sr-only peer">
+            <div class="corner-marker bg-white rounded-lg p-6 text-center hover:shadow-sm peer-checked:shadow-md transition
+                        border-2 border-transparent peer-checked:border-mint">
+                <div class="w-14 h-14 rounded-lg bg-mint/20 flex items-center justify-center mx-auto mb-4">
+                    <iconify-icon icon="lucide:briefcase" class="text-forest text-2xl"></iconify-icon>
+                </div>
+                <h3 class="font-heading font-semibold text-forest text-lg">Industry</h3>
+                <p class="text-sm text-forest/50 mt-2">Building products with AI, managing teams. Get business-focused summaries highlighting impact.</p>
+            </div>
+        </label>
+
+        <!-- Enthusiast -->
+        <label class="cursor-pointer">
+            <input type="radio" name="role" value="enthusiast" class="sr-only peer">
+            <div class="corner-marker bg-white rounded-lg p-6 text-center hover:shadow-sm peer-checked:shadow-md transition
+                        border-2 border-transparent peer-checked:border-gold">
+                <div class="w-14 h-14 rounded-lg bg-gold/20 flex items-center justify-center mx-auto mb-4">
+                    <iconify-icon icon="lucide:rocket" class="text-gold-dark text-2xl"></iconify-icon>
+                </div>
+                <h3 class="font-heading font-semibold text-forest text-lg">Enthusiast</h3>
+                <p class="text-sm text-forest/50 mt-2">Passionate about AI, staying informed. Get accessible summaries highlighting what's exciting.</p>
+            </div>
+        </label>
+
+        <div class="md:col-span-3 text-center mt-6">
+            <button type="submit" class="bg-forest text-cream rounded px-10 py-2.5 font-heading font-semibold hover:bg-forest-light transition">
+                Continue
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
