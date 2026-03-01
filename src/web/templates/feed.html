@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Feed — The AI Signal{% endblock %}
+{% block main_class %}max-w-7xl mx-auto px-6 py-6{% endblock %}
+
+{% block content %}
+<div class="flex gap-8">
+    <!-- Sticky Sidebar -->
+    <aside class="hidden md:block w-72 flex-shrink-0">
+        <div class="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto space-y-6 pr-1">
+            <!-- Header -->
+            <div>
+                <h1 class="font-heading font-bold text-2xl text-forest headline-tracking">Feed</h1>
+                <div class="flex items-center justify-between mt-1">
+                    <p class="text-forest/50 text-sm">
+                        <span id="article-count">{{ total_count }}</span> articles
+                    </p>
+                    <button onclick="clearFilters()" class="text-xs text-coral hover:text-coral-dark transition font-medium">
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
+
+            <!-- Level Filter -->
+            <div class="corner-marker p-4 bg-white rounded">
+                <h3 class="font-heading font-semibold text-forest text-sm mb-3 flex items-center gap-2">
+                    <iconify-icon icon="lucide:signal" class="text-coral"></iconify-icon>
+                    Experience Level
+                </h3>
+                <div class="space-y-2">
+                    {% for lvl in ["beginner", "intermediate", "advanced"] %}
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" name="level" value="{{ lvl }}"
+                            class="signal-checkbox feed-filter"
+                            hx-get="/api/feed/articles"
+                            hx-trigger="change"
+                            hx-include=".feed-filter"
+                            hx-target="#feed-content"
+                            hx-swap="innerHTML"
+                            hx-indicator="#feed-loading">
+                        <span class="text-sm text-forest/70 group-hover:text-forest transition capitalize">{{ lvl }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Topics Filter -->
+            <div class="corner-marker p-4 bg-white rounded">
+                <h3 class="font-heading font-semibold text-forest text-sm mb-3 flex items-center gap-2">
+                    <iconify-icon icon="lucide:tags" class="text-coral"></iconify-icon>
+                    Topics
+                </h3>
+                <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {% for topic in all_topics %}
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" name="topic" value="{{ topic }}"
+                            class="signal-checkbox feed-filter"
+                            hx-get="/api/feed/articles"
+                            hx-trigger="change"
+                            hx-include=".feed-filter"
+                            hx-target="#feed-content"
+                            hx-swap="innerHTML"
+                            hx-indicator="#feed-loading">
+                        <span class="text-sm text-forest/70 group-hover:text-forest transition">{{ topic }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Sources Filter (dynamic per active group) -->
+            <div class="corner-marker p-4 bg-white rounded">
+                <h3 class="font-heading font-semibold text-forest text-sm mb-3 flex items-center gap-2">
+                    <iconify-icon icon="lucide:rss" class="text-coral"></iconify-icon>
+                    Sources
+                </h3>
+                <div id="sources-filter">
+                    {% for group_name, group_sources in source_groups.items() %}
+                    <div class="source-group-list space-y-2" data-group="{{ group_name }}"
+                         {% if group_name != active_group %}style="display:none"{% endif %}>
+                        {% for src in group_sources %}
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" name="source" value="{{ src }}"
+                                class="signal-checkbox feed-filter source-cb"
+                                data-group="{{ group_name }}"
+                                hx-get="/api/feed/articles"
+                                hx-trigger="change"
+                                hx-include=".feed-filter"
+                                hx-target="#feed-content"
+                                hx-swap="innerHTML"
+                                hx-indicator="#feed-loading">
+                            <span class="text-sm text-forest/70 group-hover:text-forest transition">{{ src | replace("_", " ") | title }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 min-w-0">
+        <!-- Hidden inputs to track active group and sort (included in all HTMX filter requests) -->
+        <input type="hidden" name="group" value="{{ active_group }}" class="feed-filter" id="active-group">
+        <input type="hidden" name="sort" value="{{ active_sort }}" class="feed-filter" id="active-sort">
+
+        <!-- Group Tabs + Sort Dropdown row -->
+        <div class="flex items-center justify-between mb-6">
+            <!-- Group Tabs (left) -->
+            <div id="group-tabs" class="flex flex-wrap gap-2">
+                {% for gname in group_names %}
+                <button
+                    onclick="selectGroup('{{ gname }}')"
+                    class="group-tab px-4 py-2 rounded-full text-sm font-heading font-semibold transition
+                        {% if gname == active_group %}
+                            bg-forest text-cream
+                        {% else %}
+                            bg-white text-forest/70 border border-forest/10 hover:bg-forest/5
+                        {% endif %}"
+                    data-group="{{ gname }}">
+                    {% if gname == 'RSS News' %}
+                    <iconify-icon icon="lucide:rss" class="mr-1 align-middle"></iconify-icon>
+                    {% elif 'Research' in gname %}
+                    <iconify-icon icon="lucide:flask-conical" class="mr-1 align-middle"></iconify-icon>
+                    {% endif %}
+                    {{ gname }}
+                </button>
+                {% endfor %}
+            </div>
+
+            {% if user is defined and user %}
+            <!-- Sort Dropdown (right) -->
+            <div class="relative" id="sort-dropdown-wrapper">
+                <button onclick="toggleSortDropdown()" id="sort-toggle-btn"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-heading font-medium
+                           bg-white border border-forest/10 text-forest/70 hover:bg-forest/5 transition">
+                    <iconify-icon icon="lucide:arrow-up-down" class="text-coral"></iconify-icon>
+                    <span id="sort-label">{{ 'For You' if active_sort == 'for_you' else 'Most Recent' }}</span>
+                    <iconify-icon icon="lucide:chevron-down" class="text-forest/30 text-xs"></iconify-icon>
+                </button>
+                <div id="sort-dropdown" class="hidden absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-forest/10 py-1 z-20">
+                    <button onclick="selectSort('for_you')"
+                        class="sort-option w-full text-left px-3 py-2 text-sm hover:bg-cream/50 transition flex items-center gap-2
+                            {{ 'text-coral font-semibold' if active_sort == 'for_you' else 'text-forest/70' }}"
+                        data-sort="for_you">
+                        <iconify-icon icon="lucide:sparkles" class="text-base"></iconify-icon>
+                        For You
+                        {% if active_sort == 'for_you' %}
+                        <iconify-icon icon="lucide:check" class="ml-auto text-coral"></iconify-icon>
+                        {% endif %}
+                    </button>
+                    <button onclick="selectSort('recent')"
+                        class="sort-option w-full text-left px-3 py-2 text-sm hover:bg-cream/50 transition flex items-center gap-2
+                            {{ 'text-coral font-semibold' if active_sort == 'recent' else 'text-forest/70' }}"
+                        data-sort="recent">
+                        <iconify-icon icon="lucide:clock" class="text-base"></iconify-icon>
+                        Most Recent
+                        {% if active_sort == 'recent' %}
+                        <iconify-icon icon="lucide:check" class="ml-auto text-coral"></iconify-icon>
+                        {% endif %}
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="feed-loading" class="htmx-indicator text-center py-4">
+            <div class="inline-flex items-center gap-2 text-forest/50">
+                <iconify-icon icon="lucide:loader-2" class="animate-spin"></iconify-icon>
+                <span class="text-sm">Loading...</span>
+            </div>
+        </div>
+
+        <div id="feed-content">
+            {% include "partials/feed_articles.html" %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleSortDropdown() {
+    document.getElementById('sort-dropdown').classList.toggle('hidden');
+}
+
+function selectSort(name) {
+    // Update hidden input
+    document.getElementById('active-sort').value = name;
+
+    // Update dropdown label
+    const labels = { for_you: 'For You', recent: 'Most Recent' };
+    document.getElementById('sort-label').textContent = labels[name];
+
+    // Update dropdown option styling + checkmarks
+    document.querySelectorAll('.sort-option').forEach(btn => {
+        const isActive = btn.dataset.sort === name;
+        btn.className = btn.className
+            .replace(/text-coral font-semibold|text-forest\/70/g, '')
+            + (isActive ? ' text-coral font-semibold' : ' text-forest/70');
+        // Toggle checkmark icon
+        const check = btn.querySelector('iconify-icon[icon="lucide:check"]');
+        if (isActive && !check) {
+            const icon = document.createElement('iconify-icon');
+            icon.setAttribute('icon', 'lucide:check');
+            icon.className = 'ml-auto text-coral';
+            btn.appendChild(icon);
+        } else if (!isActive && check) {
+            check.remove();
+        }
+    });
+
+    // Close dropdown
+    document.getElementById('sort-dropdown').classList.add('hidden');
+
+    // Trigger HTMX fetch with all filters
+    htmx.ajax('GET', getFilterUrl(), {
+        target: '#feed-content',
+        swap: 'innerHTML',
+    });
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const wrapper = document.getElementById('sort-dropdown-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        document.getElementById('sort-dropdown').classList.add('hidden');
+    }
+});
+
+function selectGroup(name) {
+    // Update hidden input
+    document.getElementById('active-group').value = name;
+
+    // Update tab styling
+    document.querySelectorAll('.group-tab').forEach(btn => {
+        if (btn.dataset.group === name) {
+            btn.className = btn.className
+                .replace('bg-white text-forest/70 border border-forest/10 hover:bg-forest/5', '')
+                .replace('bg-forest text-cream', '')
+                + ' bg-forest text-cream';
+        } else {
+            btn.className = btn.className
+                .replace('bg-forest text-cream', '')
+                .replace('bg-white text-forest/70 border border-forest/10 hover:bg-forest/5', '')
+                + ' bg-white text-forest/70 border border-forest/10 hover:bg-forest/5';
+        }
+    });
+
+    // Show only sources for the active group, uncheck others
+    document.querySelectorAll('.source-group-list').forEach(div => {
+        if (div.dataset.group === name) {
+            div.style.display = '';
+        } else {
+            div.style.display = 'none';
+            // Uncheck hidden sources so they don't affect the query
+            div.querySelectorAll('.source-cb').forEach(cb => { cb.checked = false; });
+        }
+    });
+
+    // Trigger HTMX fetch with all filters
+    htmx.ajax('GET', getFilterUrl(), {
+        target: '#feed-content',
+        swap: 'innerHTML',
+    });
+}
+
+function getFilterUrl() {
+    const params = new URLSearchParams();
+    params.set('group', document.getElementById('active-group').value);
+    // Include sort param if the toggle exists (user is logged in)
+    const sortInput = document.getElementById('active-sort');
+    if (sortInput) {
+        params.set('sort', sortInput.value);
+    }
+    document.querySelectorAll('.signal-checkbox.feed-filter:checked').forEach(cb => {
+        params.append(cb.name, cb.value);
+    });
+    return '/api/feed/articles?' + params.toString();
+}
+
+function clearFilters() {
+    // Uncheck all checkboxes
+    document.querySelectorAll('.signal-checkbox.feed-filter').forEach(cb => {
+        cb.checked = false;
+    });
+    // Reset sort to "for_you" if the dropdown exists (user is logged in)
+    const sortInput = document.getElementById('active-sort');
+    if (sortInput) {
+        selectSort('for_you');
+    }
+    // Reset to default group (this triggers the single HTMX fetch)
+    selectGroup('RSS News');
+}
+</script>
+
+<style>
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: block; }
+    .htmx-request #feed-content { opacity: 0.5; transition: opacity 0.2s; }
+
+    /* Thin scrollbar for sidebar */
+    aside .sticky::-webkit-scrollbar { width: 4px; }
+    aside .sticky::-webkit-scrollbar-track { background: transparent; }
+    aside .sticky::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
+    aside .sticky::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+    aside .sticky { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.12) transparent; }
+
+    /* Line clamp fallback */
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}
