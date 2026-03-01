@@ -1,0 +1,87 @@
+<div class="flex items-start justify-between">
+    <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2 flex-wrap">
+            <span class="source-badge px-2 py-0.5 rounded
+                {% if article.source_name == 'arxiv' %}bg-coral/10 text-coral
+                {% elif article.source_name in ['huggingface', 'huggingface_blog'] %}bg-coral/10 text-coral
+                {% elif 'reddit' in (article.source_name or '') %}bg-coral/10 text-coral-dark
+                {% else %}bg-forest/5 text-forest/60{% endif %}">
+                {{ article.source_name | replace("_", " ") }}
+            </span>
+            {% if article.category %}
+            <span class="text-xs text-forest/30">{{ article.category }}</span>
+            {% endif %}
+            {% if article.base_importance_score %}
+            <span class="font-mono text-xs
+                {% if article.base_importance_score >= 8 %}text-coral
+                {% elif article.base_importance_score >= 5 %}text-gold-dark
+                {% else %}text-forest/30{% endif %}">
+                {{ "%.1f" | format(article.base_importance_score) }}/10
+            </span>
+            {% endif %}
+            <span class="source-badge ml-1 px-2 py-0.5 rounded
+                {% if article.status == 'approved' %}bg-mint/20 text-forest
+                {% elif article.status == 'rejected' %}bg-coral/10 text-coral line-through
+                {% else %}bg-forest/5 text-forest/40{% endif %}">
+                {{ article.status }}
+            </span>
+        </div>
+
+        <a href="{{ article.url }}" target="_blank" rel="noopener"
+           class="font-heading font-semibold text-lg text-forest hover:text-coral transition">
+            {{ article.title }}
+        </a>
+
+        <!-- Summary tabs -->
+        {% if summaries %}
+        <div class="mt-3">
+            <div class="flex gap-2 text-xs mb-2">
+                <button onclick="showTab(this, '{{ article.id }}')" data-role="student"
+                    class="px-3 py-1 rounded bg-forest text-cream font-mono font-medium text-xs">Student</button>
+                <button onclick="showTab(this, '{{ article.id }}')" data-role="industry"
+                    class="px-3 py-1 rounded bg-forest/10 text-forest/50 font-mono text-xs">Industry</button>
+                <button onclick="showTab(this, '{{ article.id }}')" data-role="enthusiast"
+                    class="px-3 py-1 rounded bg-forest/10 text-forest/50 font-mono text-xs">Enthusiast</button>
+            </div>
+            {% for role, text in summaries.items() %}
+            <div class="summary-{{ article.id }} {% if role != 'student' %}hidden{% endif %}"
+                 data-role="{{ role }}">
+                <p class="text-forest/60 text-sm leading-relaxed">{{ text }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="flex flex-col gap-2 ml-4">
+        <button data-approve-btn
+            hx-put="/api/articles/{{ article.id }}/approve"
+            hx-target="#article-{{ article.id }}"
+            hx-swap="innerHTML"
+            class="px-4 py-1.5 text-xs rounded bg-mint/20 text-forest font-mono font-medium hover:bg-mint/40 transition">
+            <iconify-icon icon="lucide:check" class="mr-0.5"></iconify-icon>
+            Approve
+        </button>
+        <button
+            hx-put="/api/articles/{{ article.id }}/reject"
+            hx-target="#article-{{ article.id }}"
+            hx-swap="innerHTML"
+            class="px-4 py-1.5 text-xs rounded bg-coral/10 text-coral font-mono font-medium hover:bg-coral/20 transition">
+            <iconify-icon icon="lucide:x" class="mr-0.5"></iconify-icon>
+            Reject
+        </button>
+    </div>
+</div>
+
+<script>
+function showTab(btn, articleId) {
+    const role = btn.dataset.role;
+    btn.parentElement.querySelectorAll('button').forEach(b => {
+        b.className = 'px-3 py-1 rounded bg-forest/10 text-forest/50 font-mono text-xs';
+    });
+    btn.className = 'px-3 py-1 rounded bg-forest text-cream font-mono font-medium text-xs';
+    document.querySelectorAll('.summary-' + articleId).forEach(div => {
+        div.classList.toggle('hidden', div.dataset.role !== role);
+    });
+}
+</script>
