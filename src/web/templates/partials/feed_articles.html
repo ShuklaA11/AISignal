@@ -1,0 +1,19 @@
+{% if not articles %}
+<div class="bg-white rounded-lg border border-forest/10 p-16 text-center">
+    <iconify-icon icon="lucide:search-x" class="text-4xl text-forest/20 mb-3"></iconify-icon>
+    <p class="text-forest/50 text-lg font-heading">No articles match your filters</p>
+    <p class="text-forest/30 text-sm mt-2">Try adjusting your filter criteria or clear all filters.</p>
+</div>
+{% else %}
+
+<div class="text-sm text-forest/40 mb-4 font-mono">
+    {{ total_count }} articles
+</div>
+
+<div class="space-y-3">
+    {% for article in articles %}
+    {% include "partials/feed_article_card.html" %}
+    {% endfor %}
+</div>
+
+{% endif %}

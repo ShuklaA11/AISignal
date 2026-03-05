@@ -1,0 +1,108 @@
+<div class="corner-marker bg-white rounded p-5 hover:shadow-sm transition group">
+    <div class="flex items-start justify-between gap-4">
+        <div class="flex-1 min-w-0">
+            <!-- Source + Meta -->
+            <div class="flex items-center gap-2 mb-2 flex-wrap">
+                <span class="source-badge px-2 py-0.5 rounded
+                    {% if article.source_name == 'arxiv' %}bg-coral/10 text-coral
+                    {% elif article.source_name in ['huggingface', 'huggingface_blog'] %}bg-coral/10 text-coral
+                    {% elif 'reddit' in (article.source_name or '') %}bg-coral/10 text-coral-dark
+                    {% elif article.source_name == 'twitter' %}bg-forest/5 text-forest/60
+                    {% elif article.source_name == 'github' %}bg-mint/20 text-forest
+                    {% else %}bg-forest/5 text-forest/60{% endif %}">
+                    {{ article.source_name | replace("_", " ") }}
+                </span>
+                {% if article.category %}
+                <span class="text-xs text-forest/30">{{ article.category }}</span>
+                {% endif %}
+                {% if article._display_pct is defined and article._display_pct %}
+                <span class="font-mono text-xs px-1.5 py-0.5 rounded
+                    {% if article._display_pct >= 90 %}bg-coral/15 text-coral
+                    {% elif article._display_pct >= 70 %}bg-gold/15 text-gold-dark
+                    {% else %}bg-forest/5 text-forest/40{% endif %}">
+                    {{ article._display_pct }}% match
+                </span>
+                {% endif %}
+                {% if article.published_at %}
+                <span class="text-xs text-forest/30">
+                    {{ article.published_at | timeago }}
+                </span>
+                {% endif %}
+                {% if article.difficulty_level %}
+                <span class="topic-pill px-2 py-0.5 rounded bg-forest/5 text-forest/40 capitalize">
+                    {{ article.difficulty_level }}
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Title -->
+            <a href="{{ article.url }}" target="_blank" rel="noopener"
+               {% if user is defined and user %}
+               onclick="fetch('/api/articles/{{ article.id }}/mark-read', {method:'POST', headers:{'x-csrf-token': document.querySelector('meta[name=csrf-token]').content}})"
+               {% endif %}
+               class="font-heading font-semibold text-forest hover:text-coral transition leading-snug block">
+                {{ article.title }}
+            </a>
+
+            <!-- Summary -->
+            {% if summaries_map is defined and article.id in summaries_map %}
+            <p class="text-forest/60 text-sm leading-relaxed mt-2 line-clamp-2">
+                {{ summaries_map[article.id] }}
+            </p>
+            {% endif %}
+
+            <!-- Topics -->
+            {% set topics = article.topics %}
+            {% if topics %}
+            <div class="flex flex-wrap gap-1.5 mt-2">
+                {% for topic in topics %}
+                <span class="topic-pill px-2 py-0.5 rounded bg-mint/10 text-forest/50">{{ topic }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-col items-center gap-2 flex-shrink-0 mt-1">
+            {% if user is defined and user %}
+            <div id="save-btn-{{ article.id }}">
+                {% set is_saved = saved_ids is defined and article.id in saved_ids %}
+                <button hx-post="/api/articles/{{ article.id }}/toggle-save"
+                        hx-target="#save-btn-{{ article.id }}"
+                        hx-swap="innerHTML"
+                        class="{{ 'text-coral' if is_saved else 'text-forest/20 hover:text-coral' }} transition flex-shrink-0"
+                        title="{{ 'Unsave' if is_saved else 'Save' }} article">
+                    <iconify-icon icon="{{ 'lucide:bookmark-check' if is_saved else 'lucide:bookmark' }}" class="text-lg"></iconify-icon>
+                </button>
+            </div>
+            {% endif %}
+            <a href="{{ article.url }}" target="_blank" rel="noopener"
+               {% if user is defined and user %}
+               onclick="fetch('/api/articles/{{ article.id }}/mark-read', {method:'POST', headers:{'x-csrf-token': document.querySelector('meta[name=csrf-token]').content}})"
+               {% endif %}
+               class="text-forest/20 group-hover:text-coral transition flex-shrink-0">
+                <iconify-icon icon="lucide:external-link" class="text-lg"></iconify-icon>
+            </a>
+            {% if user is defined and user %}
+            <div id="feedback-btn-{{ article.id }}">
+                <div class="flex gap-1.5">
+                    <button hx-post="/api/articles/{{ article.id }}/like"
+                            hx-target="#feedback-btn-{{ article.id }}"
+                            hx-swap="innerHTML"
+                            class="text-forest/20 hover:text-coral transition flex-shrink-0"
+                            title="More like this">
+                        <iconify-icon icon="lucide:thumbs-up" class="text-base"></iconify-icon>
+                    </button>
+                    <button hx-post="/api/articles/{{ article.id }}/dislike"
+                            hx-target="#feedback-btn-{{ article.id }}"
+                            hx-swap="innerHTML"
+                            class="text-forest/20 hover:text-coral transition flex-shrink-0"
+                            title="Less like this">
+                        <iconify-icon icon="lucide:thumbs-down" class="text-base"></iconify-icon>
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

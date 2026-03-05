@@ -1,0 +1,75 @@
+[project]
+name = "ai-newsletter"
+version = "0.1.0"
+description = "AI newsletter aggregator with personalized digests"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [{name = "Arnav Shukla"}]
+requires-python = ">=3.11"
+dependencies = [
+    # Web framework
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.12",
+
+    # Database
+    "sqlmodel>=0.0.22",
+    "aiosqlite>=0.20",
+
+    # LLM
+    "litellm>=1.55",
+
+    # Data fetching
+    "feedparser>=6.0",
+    "arxiv>=2.1",
+    "praw>=7.7",
+    "tweepy>=4.14",
+    "httpx>=0.27",
+    "beautifulsoup4>=4.12",
+
+    # Email
+    "resend>=2.5",
+
+    # Production server
+    "gunicorn>=21.2",
+
+    # Config
+    "pydantic-settings>=2.6",
+    "python-dotenv>=1.0",
+    "pyyaml>=6.0",
+
+    # Auth & Sessions
+    "bcrypt>=4.1",
+    "itsdangerous>=2.1",
+
+    # ML / Embeddings
+    "numpy>=1.26",
+    "torch>=2.0",
+
+    # Rate limiting
+    "slowapi>=0.1.9",
+
+    # Utilities
+    "python-dateutil>=2.9",
+    "markdownify>=0.14",
+
+    # Migrations
+    "alembic>=1.13",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[project.scripts]
+ai-newsletter = "src.web.app:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

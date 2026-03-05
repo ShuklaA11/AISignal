@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Choose Your Level — The AI Signal{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto mt-12">
+    <div class="text-center mb-10">
+        <div class="flex items-center justify-center gap-2 mb-4">
+            <span class="source-badge px-3 py-1 rounded border border-forest/20 text-forest/50">STEP 2 OF 4</span>
+        </div>
+        <h1 class="font-heading font-bold text-3xl text-forest headline-tracking">What's your experience level?</h1>
+        <p class="text-forest/50 mt-2">This adjusts the complexity and depth of your summaries.</p>
+    </div>
+
+    <form method="post" action="/onboarding/level" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {{ csrf_input(request) | safe }}
+        <!-- Beginner -->
+        <label class="cursor-pointer">
+            <input type="radio" name="level" value="beginner" class="sr-only peer" required>
+            <div class="corner-marker bg-white rounded-lg p-6 hover:shadow-sm peer-checked:shadow-md transition
+                        border-2 border-transparent peer-checked:border-coral">
+                <h3 class="font-heading font-semibold text-forest text-lg mb-2">Beginner</h3>
+                <p class="text-sm text-forest/50 mb-4">New to AI/ML. Explain technical terms, provide context.</p>
+                <div class="text-xs text-forest/40 bg-cream rounded p-3 italic font-mono leading-relaxed border border-forest/5">
+                    {% if user.role == 'student' %}
+                    "New paper on attention mechanisms &mdash; Attention lets models focus on relevant parts of the input. This paper proposes a faster variant that reduces compute by 40%."
+                    {% elif user.role == 'industry' %}
+                    "OpenAI released a new model that's 50% cheaper to run. This could reduce your API costs significantly if you're building AI-powered apps."
+                    {% else %}
+                    "A new open-source AI model can generate realistic images from text descriptions &mdash; here's how to try it yourself at home."
+                    {% endif %}
+                </div>
+            </div>
+        </label>
+
+        <!-- Intermediate -->
+        <label class="cursor-pointer">
+            <input type="radio" name="level" value="intermediate" class="sr-only peer">
+            <div class="corner-marker bg-white rounded-lg p-6 hover:shadow-sm peer-checked:shadow-md transition
+                        border-2 border-transparent peer-checked:border-mint">
+                <h3 class="font-heading font-semibold text-forest text-lg mb-2">Intermediate</h3>
+                <p class="text-sm text-forest/50 mb-4">Familiar with AI basics. Balanced depth and clarity.</p>
+                <div class="text-xs text-forest/40 bg-cream rounded p-3 italic font-mono leading-relaxed border border-forest/5">
+                    {% if user.role == 'student' %}
+                    "FlashAttention-3 introduces warp-level pipelining for IO-aware exact attention, achieving 2x throughput over FA2 on Hopper architecture GPUs."
+                    {% elif user.role == 'industry' %}
+                    "GPT-4.1 drops to $2/M input tokens with 75k context. New structured output mode supports recursive schemas."
+                    {% else %}
+                    "Flux.2 is a new open-source image model that outperforms SDXL. It runs on consumer GPUs with 12GB VRAM."
+                    {% endif %}
+                </div>
+            </div>
+        </label>
+
+        <!-- Advanced -->
+        <label class="cursor-pointer">
+            <input type="radio" name="level" value="advanced" class="sr-only peer">
+            <div class="corner-marker bg-white rounded-lg p-6 hover:shadow-sm peer-checked:shadow-md transition
+                        border-2 border-transparent peer-checked:border-gold">
+                <h3 class="font-heading font-semibold text-forest text-lg mb-2">Advanced</h3>
+                <p class="text-sm text-forest/50 mb-4">Expert in AI/ML. Concise, technical, no hand-holding.</p>
+                <div class="text-xs text-forest/40 bg-cream rounded p-3 italic font-mono leading-relaxed border border-forest/5">
+                    {% if user.role == 'student' %}
+                    "FA3: IO-aware exact attention, 2x FA2 throughput via warp-level pipelining on Hopper. 740 TFLOPs/s on H100."
+                    {% elif user.role == 'industry' %}
+                    "4.1: $2/M in, 75k ctx, recursive structured output. Breaking function calling changes &mdash; migration required."
+                    {% else %}
+                    "Flux.2 &mdash; 12B DiT, GenEval SOTA. fp8 on 12GB VRAM. ComfyUI workflow available."
+                    {% endif %}
+                </div>
+            </div>
+        </label>
+
+        <div class="md:col-span-3 text-center mt-6">
+            <button type="submit" class="bg-forest text-cream rounded px-10 py-2.5 font-heading font-semibold hover:bg-forest-light transition">
+                Continue
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

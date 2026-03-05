@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Select Topics — The AI Signal{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto mt-12">
+    <div class="text-center mb-10">
+        <div class="flex items-center justify-center gap-2 mb-4">
+            <span class="source-badge px-3 py-1 rounded border border-forest/20 text-forest/50">STEP 3 OF 4</span>
+        </div>
+        <h1 class="font-heading font-bold text-3xl text-forest headline-tracking">Pick your topics</h1>
+        <p class="text-forest/50 mt-2">We've pre-selected topics based on your role. Adjust as you like.</p>
+    </div>
+
+    <form method="post" action="/onboarding/topics">
+        {{ csrf_input(request) | safe }}
+        {% for group_name, topics in topic_groups.items() %}
+        <div class="mb-8">
+            <h3 class="source-badge text-forest/40 mb-3 block">{{ group_name | upper }}</h3>
+            <div class="flex flex-wrap gap-2">
+                {% for topic in topics %}
+                <label class="cursor-pointer">
+                    <input type="checkbox" name="topics" value="{{ topic }}" class="sr-only peer"
+                        {% if topic in default_topics %}checked{% endif %}>
+                    <span class="inline-block px-4 py-2 rounded border-2 text-sm font-body
+                        border-forest/10 text-forest/60
+                        peer-checked:bg-forest peer-checked:border-forest peer-checked:text-cream
+                        hover:border-forest/30 transition cursor-pointer">
+                        {{ topic }}
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="text-center mt-10">
+            <button type="submit" class="bg-forest text-cream rounded px-10 py-2.5 font-heading font-semibold hover:bg-forest-light transition">
+                Continue
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

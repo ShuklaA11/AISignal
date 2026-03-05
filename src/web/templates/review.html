@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Review Digest — The AI Signal{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-8">
+    <div>
+        <h1 class="font-heading font-bold text-2xl text-forest headline-tracking">Review Digest</h1>
+        <p class="text-forest/40 text-sm mt-1">{{ date }} &mdash; {{ articles | length }} articles to review</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <button onclick="approveAll()" class="px-5 py-2 bg-mint text-forest rounded font-heading font-semibold text-sm hover:bg-mint-dark transition">
+            <iconify-icon icon="lucide:check-check" class="mr-1"></iconify-icon>
+            Approve All
+        </button>
+        <div id="send-digest-result">
+            <button hx-post="/api/digests/send"
+                    hx-target="#send-digest-result"
+                    hx-swap="innerHTML"
+                    hx-indicator="#send-spinner"
+                    hx-confirm="Build and send personalized digests to all active users?"
+                    class="px-5 py-2 bg-coral text-white rounded font-heading font-semibold text-sm hover:bg-coral-dark transition flex items-center gap-2">
+                <iconify-icon icon="lucide:send" class="mr-1"></iconify-icon>
+                Send All Digests
+                <span id="send-spinner" class="htmx-indicator"><iconify-icon icon="lucide:loader-2" class="animate-spin"></iconify-icon></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+{% if not articles %}
+<div class="corner-marker bg-white rounded-lg p-16 text-center">
+    <iconify-icon icon="lucide:file-search" class="text-4xl text-forest/20 mb-3"></iconify-icon>
+    <p class="text-forest/50 text-lg font-heading">No processed articles to review</p>
+    <p class="text-forest/30 text-sm mt-2 font-mono">python scripts/run_process.py</p>
+</div>
+{% endif %}
+
+<div class="space-y-4">
+    {% for item in articles %}
+    {% set article = item.article %}
+    {% set summaries = item.summaries %}
+    <div id="article-{{ article.id }}" class="corner-marker bg-white rounded-lg p-5">
+        {% include "partials/article_card_review.html" %}
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+function approveAll() {
+    document.querySelectorAll('[data-approve-btn]').forEach(btn => btn.click());
+}
+</script>
+{% endblock %}

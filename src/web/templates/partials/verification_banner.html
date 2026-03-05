@@ -1,0 +1,29 @@
+{% if user and not user.email_verified %}
+<div class="max-w-7xl mx-auto px-6 mt-4">
+<div class="bg-coral/10 border-l-4 border-coral p-4" id="verification-banner">
+    <div class="flex items-start justify-between">
+        <div class="flex items-start gap-3">
+            <iconify-icon icon="lucide:mail" class="text-coral text-xl mt-0.5"></iconify-icon>
+            <div>
+                <h3 class="font-heading font-semibold text-forest text-sm">Verify your email address</h3>
+                <p class="text-forest/70 text-sm mt-1">
+                    We sent a verification link to <strong>{{ user.email }}</strong>.
+                    Check your inbox to verify your account.
+                </p>
+                <form method="post" action="/resend-verification" class="mt-2">
+                    {{ csrf_input(request) | safe }}
+                    <button type="submit"
+                            class="text-coral hover:text-coral-dark text-sm font-medium transition underline">
+                        Resend verification email
+                    </button>
+                </form>
+            </div>
+        </div>
+        <button onclick="document.getElementById('verification-banner').remove()"
+                class="text-forest/40 hover:text-forest/70 transition ml-4">
+            <iconify-icon icon="lucide:x" class="text-lg"></iconify-icon>
+        </button>
+    </div>
+</div>
+</div>
+{% endif %}

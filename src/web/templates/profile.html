@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block title %}Profile — The AI Signal{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center gap-3 mb-8">
+        <h1 class="font-heading font-bold text-2xl text-forest headline-tracking">Profile Settings</h1>
+        <span class="source-badge px-2 py-0.5 rounded border border-forest/15 text-forest/50">
+            {{ user.role | capitalize }} / {{ user.level | capitalize }}
+        </span>
+    </div>
+
+    <!-- Saved Articles -->
+    <div class="mb-10">
+        <h2 class="font-heading font-semibold text-forest text-lg mb-4 flex items-center gap-2">
+            <iconify-icon icon="lucide:bookmark-check" class="text-coral"></iconify-icon>
+            Saved Articles
+            {% if saved_articles %}
+            <span class="text-sm font-mono text-forest/40">({{ saved_articles | length }})</span>
+            {% endif %}
+        </h2>
+        {% if saved_articles %}
+        <div class="space-y-3" id="saved-list">
+            {% for article in saved_articles %}
+            <div {% if loop.index > 3 %}class="hidden saved-overflow"{% endif %}>
+                {% include "partials/feed_article_card.html" %}
+            </div>
+            {% endfor %}
+        </div>
+        {% if saved_articles | length > 3 %}
+        <button onclick="toggleSection('saved')" id="saved-toggle"
+            data-show-text="See all {{ saved_articles | length }} saved articles"
+            class="mt-3 text-sm font-medium text-coral hover:underline flex items-center gap-1">
+            <iconify-icon icon="lucide:chevron-down" class="text-base" id="saved-icon"></iconify-icon>
+            <span>See all {{ saved_articles | length }} saved articles</span>
+        </button>
+        {% endif %}
+        {% else %}
+        <div class="corner-marker bg-white rounded-lg p-8 text-center">
+            <iconify-icon icon="lucide:bookmark" class="text-3xl text-forest/15 mb-2"></iconify-icon>
+            <p class="text-forest/40 text-sm">No saved articles yet. Bookmark articles from the <a href="/feed" class="text-coral hover:underline">feed</a> to see them here.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recently Read -->
+    <div class="mb-10">
+        <h2 class="font-heading font-semibold text-forest text-lg mb-4 flex items-center gap-2">
+            <iconify-icon icon="lucide:history" class="text-coral"></iconify-icon>
+            Recently Read
+            {% if read_articles %}
+            <span class="text-sm font-mono text-forest/40">({{ read_articles | length }})</span>
+            {% endif %}
+        </h2>
+        {% if read_articles %}
+        <div class="space-y-3" id="read-list">
+            {% for article in read_articles %}
+            <div {% if loop.index > 3 %}class="hidden read-overflow"{% endif %}>
+                {% include "partials/feed_article_card.html" %}
+            </div>
+            {% endfor %}
+        </div>
+        {% if read_articles | length > 3 %}
+        <button onclick="toggleSection('read')" id="read-toggle"
+            data-show-text="See all {{ read_articles | length }} read articles"
+            class="mt-3 text-sm font-medium text-coral hover:underline flex items-center gap-1">
+            <iconify-icon icon="lucide:chevron-down" class="text-base" id="read-icon"></iconify-icon>
+            <span>See all {{ read_articles | length }} read articles</span>
+        </button>
+        {% endif %}
+        {% else %}
+        <div class="corner-marker bg-white rounded-lg p-8 text-center">
+            <iconify-icon icon="lucide:history" class="text-3xl text-forest/15 mb-2"></iconify-icon>
+            <p class="text-forest/40 text-sm">No articles read yet. Click on articles from the <a href="/feed" class="text-coral hover:underline">feed</a> to see them here.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if error %}
+    <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">{{ error }}</div>
+    {% endif %}
+    {% if success %}
+    <div class="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded text-sm">{{ success }}</div>
+    {% endif %}
+
+    <form method="post" action="/profile" class="space-y-8">
+        {{ csrf_input(request) | safe }}
+        <!-- Basic info -->
+        <div class="corner-marker bg-white rounded-lg p-6">
+            <h2 class="font-heading font-semibold text-forest text-lg mb-4 flex items-center gap-2">
+                <iconify-icon icon="lucide:user" class="text-coral"></iconify-icon>
+                Basic Info
+            </h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-forest/70 mb-1.5">Name</label>
+                    <input type="text" name="name" value="{{ user.name }}"
+                        class="w-full border border-forest/20 rounded px-4 py-2.5 bg-cream focus:outline-none focus:border-coral transition text-forest">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-forest/70 mb-1.5">Email</label>
+                    <input type="email" value="{{ user.email }}" disabled
+                        class="w-full border border-forest/10 rounded px-4 py-2.5 bg-cream/50 text-forest/40">
+                </div>
+            </div>
+        </div>
+
+        <!-- Role & Level -->
+        <div class="corner-marker bg-white rounded-lg p-6">
+            <h2 class="font-heading font-semibold text-forest text-lg mb-4 flex items-center gap-2">
+                <iconify-icon icon="lucide:settings-2" class="text-coral"></iconify-icon>
+                Role & Level
+            </h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-forest/70 mb-1.5">Role</label>
+                    <select name="role" class="w-full border border-forest/20 rounded px-4 py-2.5 bg-cream focus:outline-none focus:border-coral transition text-forest">
+                        <option value="student" {% if user.role == 'student' %}selected{% endif %}>Student</option>
+                        <option value="industry" {% if user.role == 'industry' %}selected{% endif %}>Industry</option>
+                        <option value="enthusiast" {% if user.role == 'enthusiast' %}selected{% endif %}>Enthusiast</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-forest/70 mb-1.5">Level</label>
+                    <select name="level" class="w-full border border-forest/20 rounded px-4 py-2.5 bg-cream focus:outline-none focus:border-coral transition text-forest">
+                        <option value="beginner" {% if user.level == 'beginner' %}selected{% endif %}>Beginner</option>
+                        <option value="intermediate" {% if user.level == 'intermediate' %}selected{% endif %}>Intermediate</option>
+                        <option value="advanced" {% if user.level == 'advanced' %}selected{% endif %}>Advanced</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Topics -->
+        <div class="corner-marker bg-white rounded-lg p-6">
+            <h2 class="font-heading font-semibold text-forest text-lg mb-4 flex items-center gap-2">
+                <iconify-icon icon="lucide:tags" class="text-coral"></iconify-icon>
+                Topics
+            </h2>
+            {% for group_name, topics in topic_groups.items() %}
+            <div class="mb-5">
+                <h3 class="source-badge text-forest/40 mb-2 block">{{ group_name | upper }}</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for topic in topics %}
+                    <label class="cursor-pointer">
+                        <input type="checkbox" name="topics" value="{{ topic }}" class="sr-only peer"
+                            {% if topic in user_topics %}checked{% endif %}>
+                        <span class="inline-block px-3 py-1.5 rounded border-2 text-sm
+                            border-forest/10 text-forest/60
+                            peer-checked:bg-forest peer-checked:border-forest peer-checked:text-cream
+                            hover:border-forest/30 transition cursor-pointer">
+                            {{ topic }}
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Source weights -->
+        <div class="corner-marker bg-white rounded-lg p-6">
+            <h2 class="font-heading font-semibold text-forest text-lg mb-4 flex items-center gap-2">
+                <iconify-icon icon="lucide:rss" class="text-coral"></iconify-icon>
+                Source Priorities
+            </h2>
+            <div class="space-y-4">
+                {% for name, label in [('rss', 'News & Blogs'), ('arxiv', 'arXiv Papers'), ('huggingface', 'HuggingFace'), ('github', 'GitHub')] %}
+                <div class="flex items-center justify-between py-1">
+                    <span class="text-sm text-forest/70 font-medium">{{ label }}</span>
+                    <div class="flex items-center gap-3">
+                        <input type="range" name="weight_{{ name }}" min="0" max="10"
+                            value="{{ source_preferences.get(name, 5) }}"
+                            class="w-36"
+                            oninput="this.nextElementSibling.textContent = this.value">
+                        <span class="text-sm font-mono w-6 text-center text-forest/50">{{ source_preferences.get(name, 5) }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="text-center pb-4">
+            <button type="submit" class="bg-forest text-cream rounded px-10 py-2.5 font-heading font-semibold hover:bg-forest-light transition">
+                Save Changes
+            </button>
+        </div>
+    </form>
+
+    <!-- Account Management -->
+    <div class="space-y-8 mt-8 border-t border-forest/10 pt-8">
+
+        <!-- Change Email -->
+        <form method="post" action="/profile/email">
+            {{ csrf_input(request) | safe }}
+            <div class="corner-marker bg-white rounded-lg p-6">
+                <h2 class="font-heading font-semibold text-forest text-lg mb-4 flex items-center gap-2">
+                    <iconify-icon icon="lucide:mail" class="text-coral"></iconify-icon>
+                    Change Email
+                </h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-forest/70 mb-1.5">New Email</label>
+                        <input type="email" name="new_email" required
+                            class="w-full border border-forest/20 rounded px-4 py-2.5 bg-cream focus:outline-none focus:border-coral transition text-forest"
+                            placeholder="new@example.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-forest/70 mb-1.5">Current Password</label>
+                        <input type="password" name="password" required
+                            class="w-full border border-forest/20 rounded px-4 py-2.5 bg-cream focus:outline-none focus:border-coral transition text-forest">
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button type="submit" class="bg-forest text-cream rounded px-6 py-2 text-sm font-heading font-semibold hover:bg-forest-light transition">
+                        Update Email
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Change Password -->
+        <form method="post" action="/profile/password">
+            {{ csrf_input(request) | safe }}
+            <div class="corner-marker bg-white rounded-lg p-6">
+                <h2 class="font-heading font-semibold text-forest text-lg mb-4 flex items-center gap-2">
+                    <iconify-icon icon="lucide:lock" class="text-coral"></iconify-icon>
+                    Change Password
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-forest/70 mb-1.5">Current Password</label>
+                        <input type="password" name="current_password" required
+                            class="w-full border border-forest/20 rounded px-4 py-2.5 bg-cream focus:outline-none focus:border-coral transition text-forest">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-forest/70 mb-1.5">New Password</label>
+                            <input type="password" name="new_password" required minlength="8"
+                                class="w-full border border-forest/20 rounded px-4 py-2.5 bg-cream focus:outline-none focus:border-coral transition text-forest">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-forest/70 mb-1.5">Confirm New Password</label>
+                            <input type="password" name="confirm_password" required minlength="8"
+                                class="w-full border border-forest/20 rounded px-4 py-2.5 bg-cream focus:outline-none focus:border-coral transition text-forest">
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button type="submit" class="bg-forest text-cream rounded px-6 py-2 text-sm font-heading font-semibold hover:bg-forest-light transition">
+                        Change Password
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Delete Account -->
+        <form method="post" action="/profile/delete" onsubmit="return confirm('Are you sure you want to permanently delete your account? This action cannot be undone.');">
+            {{ csrf_input(request) | safe }}
+            <div class="corner-marker bg-white rounded-lg p-6 border border-red-200">
+                <h2 class="font-heading font-semibold text-red-600 text-lg mb-4 flex items-center gap-2">
+                    <iconify-icon icon="lucide:trash-2" class="text-red-500"></iconify-icon>
+                    Delete Account
+                </h2>
+                <p class="text-sm text-forest/60 mb-4">Permanently delete your account and all associated data. This action cannot be undone.</p>
+                <div class="flex items-end gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-forest/70 mb-1.5">Confirm Password</label>
+                        <input type="password" name="password" required
+                            class="w-full border border-forest/20 rounded px-4 py-2.5 bg-cream focus:outline-none focus:border-red-400 transition text-forest">
+                    </div>
+                    <button type="submit" class="bg-red-600 text-white rounded px-6 py-2.5 text-sm font-heading font-semibold hover:bg-red-700 transition">
+                        Delete My Account
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleSection(section) {
+    const items = document.querySelectorAll('.' + section + '-overflow');
+    if (!items.length) return;
+    const btn = document.getElementById(section + '-toggle');
+    const icon = document.getElementById(section + '-icon');
+    const expanded = !items[0].classList.contains('hidden');
+
+    items.forEach(el => el.classList.toggle('hidden'));
+
+    if (expanded) {
+        icon.setAttribute('icon', 'lucide:chevron-down');
+        btn.querySelector('span').textContent = btn.dataset.showText;
+    } else {
+        icon.setAttribute('icon', 'lucide:chevron-up');
+        btn.querySelector('span').textContent = 'Show less';
+    }
+}
+</script>
+{% endblock %}

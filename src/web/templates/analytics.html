@@ -1,0 +1,713 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics — The AI Signal{% endblock %}
+
+{% macro sparkline(data, color_hex) %}
+{% if data|length > 1 %}
+{% set w = 160 %}
+{% set h = 32 %}
+{% set max_val = data|max if data|max > 0 else 1 %}
+{% set min_val = data|min %}
+{% set range_val = max_val - min_val if max_val != min_val else 1 %}
+<svg width="{{ w }}" height="{{ h }}" viewBox="0 0 {{ w }} {{ h }}" class="w-full">
+    <polyline
+        fill="none"
+        stroke="{{ color_hex }}"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        points="{% for v in data %}{{ (loop.index0 * w / (data|length - 1))|round(1) }},{{ (h - 4 - ((v - min_val) / range_val) * (h - 8))|round(1) }}{% if not loop.last %} {% endif %}{% endfor %}"
+    />
+</svg>
+{% else %}
+<div class="h-8 flex items-center text-forest/30 text-xs">Not enough data</div>
+{% endif %}
+{% endmacro %}
+
+{% macro metric_card(label, tooltip_title, tooltip_text, value, subtitle, data, color_hex, icon) %}
+<div class="corner-marker bg-white p-5 border border-forest/10">
+    <div class="flex items-center justify-between mb-1">
+        <div class="flex items-center gap-1.5">
+            <span class="source-badge text-forest/50">{{ label }}</span>
+            <div class="relative group">
+                <iconify-icon icon="lucide:info" class="text-forest/30 text-xs cursor-help"></iconify-icon>
+                <div class="metric-tooltip">
+                    <strong>{{ tooltip_title }}</strong><br>
+                    {{ tooltip_text }}
+                </div>
+            </div>
+        </div>
+        <iconify-icon icon="{{ icon }}" class="text-lg" style="color: {{ color_hex }};"></iconify-icon>
+    </div>
+    <div class="font-heading text-2xl font-bold text-forest">{{ value }}</div>
+    <p class="text-forest/40 text-xs mt-1">{{ subtitle }}</p>
+    <div class="mt-3">
+        {{ sparkline(data, color_hex) }}
+    </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="font-heading text-3xl font-bold text-forest headline-tracking">Personalization Analytics</h1>
+        <p class="text-forest/60 mt-1">30-day evaluation metrics for your feed scoring system</p>
+    </div>
+
+    <!-- Tab Navigation (admin only) -->
+    {% if user.is_admin %}
+    <div class="flex gap-1 mb-8 border-b border-forest/10">
+        <a href="/analytics?tab=personal"
+           class="px-5 py-2.5 text-sm font-medium transition border-b-2 -mb-px
+                  {% if active_tab == 'personal' %}border-forest text-forest{% else %}border-transparent text-forest/50 hover:text-forest/70{% endif %}">
+            <iconify-icon icon="lucide:user" class="mr-1.5 align-middle"></iconify-icon>
+            My Analytics
+        </a>
+        <a href="/analytics?tab=system"
+           class="px-5 py-2.5 text-sm font-medium transition border-b-2 -mb-px
+                  {% if active_tab == 'system' %}border-forest text-forest{% else %}border-transparent text-forest/50 hover:text-forest/70{% endif %}">
+            <iconify-icon icon="lucide:activity" class="mr-1.5 align-middle"></iconify-icon>
+            System Overview
+        </a>
+        <a href="/analytics?tab=fetch"
+           class="px-5 py-2.5 text-sm font-medium transition border-b-2 -mb-px
+                  {% if active_tab == 'fetch' %}border-forest text-forest{% else %}border-transparent text-forest/50 hover:text-forest/70{% endif %}">
+            <iconify-icon icon="lucide:rss" class="mr-1.5 align-middle"></iconify-icon>
+            Fetch Health
+        </a>
+    </div>
+    {% endif %}
+
+    {% if active_tab == 'system' and user.is_admin %}
+    {# ===== SYSTEM OVERVIEW TAB ===== #}
+
+    {% if not agg_metrics %}
+    <div class="border border-dashed border-forest/20 rounded-lg p-12 text-center">
+        <iconify-icon icon="lucide:database" class="text-4xl text-forest/30 mb-3"></iconify-icon>
+        <p class="text-forest/60 font-heading font-medium">No aggregate metrics data yet</p>
+        <p class="text-forest/40 text-sm mt-1">Metrics are computed nightly from all user feed interactions</p>
+    </div>
+    {% else %}
+
+    <!-- System Health Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white border border-forest/10 rounded-lg p-4 text-center">
+            <iconify-icon icon="lucide:users" class="text-2xl text-coral mb-1"></iconify-icon>
+            <div class="font-heading text-2xl font-bold text-forest">{{ total_users }}</div>
+            <div class="text-forest/50 text-xs mt-0.5">Active Users</div>
+        </div>
+        <div class="bg-white border border-forest/10 rounded-lg p-4 text-center">
+            <iconify-icon icon="lucide:file-text" class="text-2xl text-forest-light mb-1"></iconify-icon>
+            <div class="font-heading text-2xl font-bold text-forest">{{ "{:,}".format(total_articles) }}</div>
+            <div class="text-forest/50 text-xs mt-0.5">Total Articles</div>
+        </div>
+        <div class="bg-white border border-forest/10 rounded-lg p-4 text-center">
+            <iconify-icon icon="lucide:brain" class="text-2xl text-gold mb-1"></iconify-icon>
+            <div class="font-heading text-2xl font-bold text-forest">{{ "{:,}".format(total_embeddings) }}</div>
+            <div class="text-forest/50 text-xs mt-0.5">Embeddings</div>
+        </div>
+        <div class="bg-white border border-forest/10 rounded-lg p-4 text-center">
+            <iconify-icon icon="lucide:eye" class="text-2xl text-mint-dark mb-1"></iconify-icon>
+            <div class="font-heading text-2xl font-bold text-forest">{{ "{:,}".format(total_all_impressions) }}</div>
+            <div class="text-forest/50 text-xs mt-0.5">All-Time Impressions</div>
+        </div>
+    </div>
+
+    <!-- Aggregate Metric Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {{ metric_card(
+            "AVG CTR", "Average Click-Through Rate",
+            "Mean CTR across all users per day. Higher values indicate the feed surfaces engaging content.",
+            "%.1f"|format((agg_latest.avg_ctr or 0) * 100) ~ "%",
+            "Avg across all users",
+            agg_ctr_data, "#FF8C69", "lucide:mouse-pointer-click"
+        ) }}
+        {{ metric_card(
+            "AVG SAVE", "Average Save Rate",
+            "Mean save rate across all users. High save rate means users find lasting value in recommended articles.",
+            "%.1f"|format((agg_latest.avg_save_rate or 0) * 100) ~ "%",
+            "Avg saves / impressions",
+            agg_save_data, "#1A3C2B", "lucide:bookmark"
+        ) }}
+        {{ metric_card(
+            "AVG nDCG", "Average nDCG@10",
+            "Mean ranking quality across users. Higher values mean clicked/saved articles appear near the top of feeds.",
+            "%.3f"|format(agg_latest.avg_ndcg or 0),
+            "Avg ranking quality",
+            agg_ndcg_data, "#F4D35E", "lucide:list-ordered"
+        ) }}
+        {{ metric_card(
+            "AVG LIFT", "Average Personalization Lift",
+            "Mean For-You CTR / Overall CTR. Values above 1.0x mean personalization is helping across the platform.",
+            "%.2f"|format(agg_latest.avg_lift or 1.0) ~ "x",
+            "Avg For You vs All",
+            agg_lift_data, "#6EDD99", "lucide:trending-up"
+        ) }}
+    </div>
+
+    <!-- Platform Totals -->
+    <div class="bg-white border border-forest/10 rounded-lg p-6 mb-8">
+        <h2 class="font-heading text-lg font-semibold text-forest mb-4">30-Day Platform Totals</h2>
+        <div class="grid grid-cols-3 gap-6">
+            <div class="text-center">
+                <div class="font-heading text-3xl font-bold text-forest">{{ "{:,}".format(agg_impressions) }}</div>
+                <div class="text-forest/50 text-sm mt-1">Total Impressions</div>
+            </div>
+            <div class="text-center">
+                <div class="font-heading text-3xl font-bold text-coral">{{ "{:,}".format(agg_clicks) }}</div>
+                <div class="text-forest/50 text-sm mt-1">Total Clicks</div>
+            </div>
+            <div class="text-center">
+                <div class="font-heading text-3xl font-bold text-forest-light">{{ "{:,}".format(agg_saves) }}</div>
+                <div class="text-forest/50 text-sm mt-1">Total Saves</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ML Model Health -->
+    <div class="bg-white border border-forest/10 rounded-lg p-6 mb-8">
+        <h2 class="font-heading text-lg font-semibold text-forest mb-4">ML Model Health</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Alpha Distribution -->
+            <div>
+                <div class="text-sm text-forest/50 mb-3">Alpha Distribution ({{ total_users }} users)</div>
+                <div class="flex gap-1 h-6 rounded overflow-hidden mb-3">
+                    {% if total_users > 0 %}
+                    {% set learn_pct = (learning_count / total_users * 100)|round(0)|int %}
+                    {% set blend_pct = (blending_count / total_users * 100)|round(0)|int %}
+                    {% set ml_pct = (ml_dominant_count / total_users * 100)|round(0)|int %}
+                    {% if learn_pct > 0 %}
+                    <div class="bg-gold/60 flex items-center justify-center text-xs font-mono text-forest" style="width: {{ learn_pct }}%">
+                        {% if learn_pct > 15 %}{{ learning_count }}{% endif %}
+                    </div>
+                    {% endif %}
+                    {% if blend_pct > 0 %}
+                    <div class="bg-coral/50 flex items-center justify-center text-xs font-mono text-white" style="width: {{ blend_pct }}%">
+                        {% if blend_pct > 15 %}{{ blending_count }}{% endif %}
+                    </div>
+                    {% endif %}
+                    {% if ml_pct > 0 %}
+                    <div class="bg-mint/70 flex items-center justify-center text-xs font-mono text-forest" style="width: {{ ml_pct }}%">
+                        {% if ml_pct > 15 %}{{ ml_dominant_count }}{% endif %}
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                <div class="flex gap-4 text-xs text-forest/50">
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-gold/60"></span> Learning ({{ learning_count }})</span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-coral/50"></span> Blending ({{ blending_count }})</span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-mint/70"></span> ML-Dominant ({{ ml_dominant_count }})</span>
+                </div>
+                <div class="mt-3 text-sm text-forest/60">
+                    Average alpha: <span class="font-mono font-medium">{{ avg_alpha }}</span>
+                </div>
+            </div>
+            <!-- Embedding Coverage -->
+            <div>
+                <div class="text-sm text-forest/50 mb-3">Embedding Coverage</div>
+                {% set coverage = (total_embeddings / processed_articles * 100)|round(1) if processed_articles > 0 else 0 %}
+                <div class="w-full bg-cream rounded-full h-4 overflow-hidden mb-2">
+                    <div class="h-full rounded-full bg-forest transition-all" style="width: {{ coverage }}%"></div>
+                </div>
+                <div class="flex justify-between text-xs text-forest/40">
+                    <span>{{ "{:,}".format(total_embeddings) }} embedded</span>
+                    <span>{{ "{:,}".format(processed_articles) }} processed</span>
+                </div>
+                <div class="mt-2 text-sm text-forest/60">
+                    Coverage: <span class="font-mono font-medium">{{ "%.1f"|format(coverage) }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Per-User Breakdown -->
+    {% if user_profiles %}
+    <div class="bg-white border border-forest/10 rounded-lg overflow-hidden mb-8">
+        <div class="p-4 border-b border-forest/10">
+            <h2 class="font-heading text-lg font-semibold text-forest">Per-User Breakdown</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-forest/10 text-forest/50">
+                        <th class="px-4 py-3 text-left font-medium source-badge">User</th>
+                        <th class="px-4 py-3 text-center font-medium source-badge">Role / Level</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Alpha</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Impressions</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Clicks</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Saves</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">CTR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for up in user_profiles %}
+                    <tr class="border-b border-forest/5 hover:bg-cream/50">
+                        <td class="px-4 py-2.5">
+                            <div class="text-forest font-medium">{{ up.user.name or up.user.email }}</div>
+                            <div class="text-forest/40 text-xs">{{ up.user.email }}</div>
+                        </td>
+                        <td class="px-4 py-2.5 text-center">
+                            <span class="source-badge inline-block px-2 py-0.5 rounded border border-forest/15 text-forest/60 text-center">
+                                {{ up.user.role | capitalize }} / {{ up.user.level | capitalize }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-2.5 text-right">
+                            {% if up.profile %}
+                            <span class="font-mono text-forest">{{ "%.2f"|format(up.profile.alpha) }}</span>
+                            {% else %}
+                            <span class="text-forest/30">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-2.5 text-right text-forest/70">{{ "{:,}".format(up.total_impressions) }}</td>
+                        <td class="px-4 py-2.5 text-right text-coral">{{ up.total_clicks }}</td>
+                        <td class="px-4 py-2.5 text-right text-forest-light">{{ up.total_saves }}</td>
+                        <td class="px-4 py-2.5 text-right font-mono text-forest">{{ "%.1f"|format(up.ctr * 100) }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Aggregate Daily Breakdown -->
+    {% if agg_metrics|length > 1 %}
+    <div class="bg-white border border-forest/10 rounded-lg overflow-hidden mb-8">
+        <div class="p-4 border-b border-forest/10">
+            <h2 class="font-heading text-lg font-semibold text-forest">Aggregate Daily Breakdown</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-forest/10 text-forest/50">
+                        <th class="px-4 py-3 text-left font-medium source-badge">Date</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Users</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Impressions</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Clicks</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Saves</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Avg CTR</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Avg nDCG</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Avg Lift</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in agg_metrics|reverse %}
+                    {% if d.sum_impressions > 0 %}
+                    <tr class="border-b border-forest/5 hover:bg-cream/50">
+                        <td class="px-4 py-2.5 font-mono text-forest/70">{{ d.metric_date.strftime("%b %d") }}</td>
+                        <td class="px-4 py-2.5 text-right text-forest/70">{{ d.user_count }}</td>
+                        <td class="px-4 py-2.5 text-right text-forest/70">{{ "{:,}".format(d.sum_impressions) }}</td>
+                        <td class="px-4 py-2.5 text-right text-coral">{{ d.sum_clicks }}</td>
+                        <td class="px-4 py-2.5 text-right text-forest-light">{{ d.sum_saves }}</td>
+                        <td class="px-4 py-2.5 text-right font-mono text-forest">{{ "%.1f"|format(d.avg_ctr * 100) }}%</td>
+                        <td class="px-4 py-2.5 text-right font-mono text-forest">{{ "%.3f"|format(d.avg_ndcg) }}</td>
+                        <td class="px-4 py-2.5 text-right font-mono text-forest">{{ "%.2f"|format(d.avg_lift) }}x</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+
+    {% elif active_tab == 'fetch' and user.is_admin %}
+    {# ===== FETCH HEALTH TAB ===== #}
+
+    {% if not fetch_health or not fetch_health.per_source %}
+    <div class="border border-dashed border-forest/20 rounded-lg p-12 text-center">
+        <iconify-icon icon="lucide:rss" class="text-4xl text-forest/30 mb-3"></iconify-icon>
+        <p class="text-forest/60 font-heading font-medium">No fetch data yet</p>
+        <p class="text-forest/40 text-sm mt-1">Fetch metrics will appear here after the next pipeline run</p>
+    </div>
+    {% else %}
+
+    <!-- Source Health Overview Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {% set total_sources = fetch_health.per_source | length %}
+        {% set ns = namespace(healthy=0, warning=0, error=0) %}
+        {% for src, data in fetch_health.per_source.items() %}
+            {% if data.error_runs > 0 %}
+                {% set ns.error = ns.error + 1 %}
+            {% elif data.empty_runs > data.total_runs // 2 %}
+                {% set ns.warning = ns.warning + 1 %}
+            {% else %}
+                {% set ns.healthy = ns.healthy + 1 %}
+            {% endif %}
+        {% endfor %}
+        {% set healthy_sources = ns.healthy %}
+        {% set warning_sources = ns.warning %}
+        {% set error_sources = ns.error %}
+        <div class="bg-white border border-forest/10 rounded-lg p-4 text-center">
+            <iconify-icon icon="lucide:rss" class="text-2xl text-coral mb-1"></iconify-icon>
+            <div class="font-heading text-2xl font-bold text-forest">{{ total_sources }}</div>
+            <div class="text-forest/50 text-xs mt-0.5">Active Sources</div>
+        </div>
+        <div class="bg-white border border-forest/10 rounded-lg p-4 text-center">
+            <iconify-icon icon="lucide:refresh-cw" class="text-2xl text-forest-light mb-1"></iconify-icon>
+            <div class="font-heading text-2xl font-bold text-forest">{{ fetch_health.runs | length }}</div>
+            <div class="text-forest/50 text-xs mt-0.5">Fetch Runs (14d)</div>
+        </div>
+        <div class="bg-white border border-forest/10 rounded-lg p-4 text-center">
+            <iconify-icon icon="lucide:file-plus" class="text-2xl text-gold mb-1"></iconify-icon>
+            {% set total_new = fetch_health.per_source.values() | map(attribute='total_new') | sum %}
+            <div class="font-heading text-2xl font-bold text-forest">{{ "{:,}".format(total_new) }}</div>
+            <div class="text-forest/50 text-xs mt-0.5">New Articles (14d)</div>
+        </div>
+        <div class="bg-white border border-forest/10 rounded-lg p-4 text-center">
+            <iconify-icon icon="lucide:download" class="text-2xl text-mint-dark mb-1"></iconify-icon>
+            {% set total_fetched = fetch_health.per_source.values() | map(attribute='total_fetched') | sum %}
+            <div class="font-heading text-2xl font-bold text-forest">{{ "{:,}".format(total_fetched) }}</div>
+            <div class="text-forest/50 text-xs mt-0.5">Total Fetched (14d)</div>
+        </div>
+    </div>
+
+    <!-- Per-Source Health Table -->
+    <div class="bg-white border border-forest/10 rounded-lg overflow-hidden mb-8">
+        <div class="p-4 border-b border-forest/10">
+            <h2 class="font-heading text-lg font-semibold text-forest">Source Health</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-forest/10 text-forest/50">
+                        <th class="px-4 py-3 text-left font-medium">Source</th>
+                        <th class="px-4 py-3 text-center font-medium">Status</th>
+                        <th class="px-4 py-3 text-right font-medium">Runs</th>
+                        <th class="px-4 py-3 text-right font-medium">Fetched</th>
+                        <th class="px-4 py-3 text-right font-medium">New</th>
+                        <th class="px-4 py-3 text-right font-medium">Dedup Rate</th>
+                        <th class="px-4 py-3 text-right font-medium">Avg Speed</th>
+                        <th class="px-4 py-3 text-right font-medium">Last Run</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for src, data in fetch_health.per_source.items() | sort(attribute='0') %}
+                    <tr class="border-b border-forest/5 hover:bg-cream/50">
+                        <td class="px-4 py-2.5">
+                            <span class="font-medium text-forest">{{ src | replace("_", " ") | title }}</span>
+                        </td>
+                        <td class="px-4 py-2.5 text-center">
+                            {% if data.error_runs > 0 %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-xs font-medium">
+                                <iconify-icon icon="lucide:alert-circle" class="text-xs"></iconify-icon>
+                                Error
+                            </span>
+                            {% elif data.empty_runs > data.total_runs // 2 %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gold/15 text-gold-dark text-xs font-medium">
+                                <iconify-icon icon="lucide:alert-triangle" class="text-xs"></iconify-icon>
+                                Warning
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-mint/15 text-forest text-xs font-medium">
+                                <iconify-icon icon="lucide:check-circle" class="text-xs"></iconify-icon>
+                                Healthy
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-2.5 text-right text-forest/70">
+                            <span class="font-mono">{{ data.ok_runs }}</span>
+                            <span class="text-forest/30">/</span>
+                            <span class="font-mono">{{ data.total_runs }}</span>
+                        </td>
+                        <td class="px-4 py-2.5 text-right font-mono text-forest/70">{{ "{:,}".format(data.total_fetched) }}</td>
+                        <td class="px-4 py-2.5 text-right font-mono text-coral">{{ "{:,}".format(data.total_new) }}</td>
+                        <td class="px-4 py-2.5 text-right font-mono text-forest/70">
+                            {% if data.total_fetched > 0 %}
+                            {{ "%.0f"|format((1 - data.total_new / data.total_fetched) * 100) }}%
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-2.5 text-right font-mono text-forest/50">
+                            {{ "%.1f"|format(data.avg_duration_ms / 1000) }}s
+                        </td>
+                        <td class="px-4 py-2.5 text-right text-forest/50 text-xs">
+                            {% if data.last_run %}
+                            {{ data.last_run.strftime('%b %d %H:%M') }}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Daily Fetch Volume -->
+    {% if fetch_health.daily %}
+    <div class="bg-white border border-forest/10 rounded-lg overflow-hidden mb-8">
+        <div class="p-4 border-b border-forest/10">
+            <h2 class="font-heading text-lg font-semibold text-forest">Daily Fetch Volume</h2>
+        </div>
+
+        <!-- Stacked bar chart -->
+        <div class="p-6">
+            {% set max_daily = fetch_health.daily | map(attribute='total_new') | max %}
+            {% set max_daily = max_daily if max_daily > 0 else 1 %}
+            <div class="flex items-end gap-1.5 h-40">
+                {% for day in fetch_health.daily %}
+                <div class="flex-1 flex flex-col items-center gap-1">
+                    <div class="w-full rounded-t relative group"
+                         style="height: {{ (day.total_new / max_daily * 140)|round(0)|int }}px; min-height: 4px; background: linear-gradient(to top, #FF8C69, #1A3C2B);">
+                        <!-- Tooltip -->
+                        <div class="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-forest text-cream text-xs rounded px-2 py-1.5 whitespace-nowrap z-10">
+                            <strong>{{ day.date.strftime('%b %d') }}</strong><br>
+                            {{ day.total_new }} new / {{ day.total_fetched }} fetched
+                            {% for src, cnt in day.source_counts.items() | sort(attribute='1', reverse=true) %}
+                            {% if cnt > 0 %}
+                            <br>{{ src | replace("_", " ") }}: {{ cnt }}
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <span class="text-forest/30 text-xs font-mono">{{ day.date.strftime('%d') }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="flex justify-between text-xs text-forest/40 mt-1 px-1">
+                {% if fetch_health.daily %}
+                <span>{{ fetch_health.daily[0].date.strftime('%b %d') }}</span>
+                <span>{{ fetch_health.daily[-1].date.strftime('%b %d') }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Fetch Runs (last 20) -->
+    {% if fetch_health.runs %}
+    <div class="bg-white border border-forest/10 rounded-lg overflow-hidden mb-8">
+        <div class="p-4 border-b border-forest/10">
+            <h2 class="font-heading text-lg font-semibold text-forest">Recent Fetch Runs</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-forest/10 text-forest/50">
+                        <th class="px-4 py-3 text-left font-medium">Time</th>
+                        <th class="px-4 py-3 text-left font-medium">Source</th>
+                        <th class="px-4 py-3 text-center font-medium">Status</th>
+                        <th class="px-4 py-3 text-right font-medium">Fetched</th>
+                        <th class="px-4 py-3 text-right font-medium">New</th>
+                        <th class="px-4 py-3 text-right font-medium">Duration</th>
+                        <th class="px-4 py-3 text-left font-medium">Error</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in fetch_health.runs[:30] %}
+                    <tr class="border-b border-forest/5 hover:bg-cream/50">
+                        <td class="px-4 py-2 font-mono text-forest/50 text-xs">{{ run.fetched_at.strftime('%b %d %H:%M') }}</td>
+                        <td class="px-4 py-2 text-forest font-medium">{{ run.source_name | replace("_", " ") | title }}</td>
+                        <td class="px-4 py-2 text-center">
+                            {% if run.status == 'ok' %}
+                            <iconify-icon icon="lucide:check" class="text-mint-dark"></iconify-icon>
+                            {% elif run.status == 'empty' %}
+                            <iconify-icon icon="lucide:minus" class="text-gold-dark"></iconify-icon>
+                            {% else %}
+                            <iconify-icon icon="lucide:x" class="text-red-500"></iconify-icon>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-2 text-right font-mono text-forest/70">{{ run.articles_fetched }}</td>
+                        <td class="px-4 py-2 text-right font-mono text-coral">{{ run.articles_new }}</td>
+                        <td class="px-4 py-2 text-right font-mono text-forest/50">{{ "%.1f"|format(run.duration_ms / 1000) }}s</td>
+                        <td class="px-4 py-2 text-forest/40 text-xs truncate max-w-[200px]">{{ run.error or '' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+
+    {% else %}
+    {# ===== PERSONAL ANALYTICS TAB ===== #}
+
+    {% if not metrics %}
+    <div class="border border-dashed border-forest/20 rounded-lg p-12 text-center">
+        <iconify-icon icon="lucide:bar-chart-3" class="text-4xl text-forest/30 mb-3"></iconify-icon>
+        <p class="text-forest/60 font-heading font-medium">No metrics data yet</p>
+        <p class="text-forest/40 text-sm mt-1">Metrics are computed nightly from your feed interactions</p>
+    </div>
+    {% else %}
+
+    <!-- Personal Metric Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {{ metric_card(
+            "CTR", "Click-Through Rate",
+            "Clicks / Impressions per day. Measures how often you engage with articles shown in your feed.",
+            "%.1f"|format((latest.ctr or 0) * 100) ~ "%",
+            "Click-through rate",
+            ctr_data, "#FF8C69", "lucide:mouse-pointer-click"
+        ) }}
+        {{ metric_card(
+            "SAVE RATE", "Save Rate",
+            "Saves / Impressions per day. Tracks how often you bookmark articles for later, indicating high-value content.",
+            "%.1f"|format((latest.save_rate or 0) * 100) ~ "%",
+            "Articles saved / shown",
+            save_rate_data, "#1A3C2B", "lucide:bookmark"
+        ) }}
+        {{ metric_card(
+            "nDCG@10", "Normalized Discounted Cumulative Gain",
+            "Measures ranking quality of the top 10 articles. Relevance: saved=3, clicked=1, skipped=0. Score of 1.0 means perfect ranking.",
+            "%.3f"|format(latest.ndcg_at_10 or 0),
+            "Ranking quality (0-1)",
+            ndcg_data, "#F4D35E", "lucide:list-ordered"
+        ) }}
+        {{ metric_card(
+            "LIFT", "Personalization Lift",
+            "For You CTR / All Feed CTR. Values above 1.0x mean personalization is improving engagement over the unfiltered feed.",
+            "%.2f"|format(latest.personalization_lift or 1.0) ~ "x",
+            "For You vs All CTR",
+            lift_data, "#6EDD99", "lucide:trending-up"
+        ) }}
+    </div>
+
+    <!-- Interaction Totals -->
+    <div class="bg-white border border-forest/10 rounded-lg p-6 mb-8">
+        <h2 class="font-heading text-lg font-semibold text-forest mb-4">30-Day Interaction Totals</h2>
+        <div class="grid grid-cols-3 gap-6">
+            <div class="text-center">
+                <div class="font-heading text-3xl font-bold text-forest">{{ "{:,}".format(total_impressions) }}</div>
+                <div class="text-forest/50 text-sm mt-1">Impressions</div>
+            </div>
+            <div class="text-center">
+                <div class="font-heading text-3xl font-bold text-coral">{{ "{:,}".format(total_clicks) }}</div>
+                <div class="text-forest/50 text-sm mt-1">Clicks</div>
+            </div>
+            <div class="text-center">
+                <div class="font-heading text-3xl font-bold text-forest-light">{{ "{:,}".format(total_saves) }}</div>
+                <div class="text-forest/50 text-sm mt-1">Saves</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ML Profile Status -->
+    {% if ml_profile %}
+    <div class="bg-white border border-forest/10 rounded-lg p-6 mb-8">
+        <h2 class="font-heading text-lg font-semibold text-forest mb-4">ML Profile Status</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="source-badge px-2 py-0.5 rounded border border-forest/15 text-forest/60">Alpha: {{ "%.2f"|format(ml_profile.alpha) }}</span>
+                    {% if ml_profile.alpha > 0.7 %}
+                    <span class="source-badge px-2 py-0.5 rounded bg-gold/20 text-gold-dark">Learning</span>
+                    {% elif ml_profile.alpha > 0.4 %}
+                    <span class="source-badge px-2 py-0.5 rounded bg-coral/20 text-coral-dark">Blending</span>
+                    {% else %}
+                    <span class="source-badge px-2 py-0.5 rounded bg-mint/20 text-forest">ML-Dominant</span>
+                    {% endif %}
+                </div>
+                <p class="text-forest/60 text-sm leading-relaxed">
+                    {% if ml_profile.alpha > 0.7 %}
+                    The system is still learning your preferences. Scores rely mostly on rule-based matching ({{ "%.0f"|format(ml_profile.alpha * 100) }}% rules, {{ "%.0f"|format((1 - ml_profile.alpha) * 100) }}% learned).
+                    {% elif ml_profile.alpha > 0.4 %}
+                    The system is blending rules with learned behavior. Your clicks and saves are starting to influence rankings ({{ "%.0f"|format(ml_profile.alpha * 100) }}% rules, {{ "%.0f"|format((1 - ml_profile.alpha) * 100) }}% learned).
+                    {% else %}
+                    The ML model is driving most of your feed ranking. Your behavioral patterns dominate over initial rules ({{ "%.0f"|format(ml_profile.alpha * 100) }}% rules, {{ "%.0f"|format((1 - ml_profile.alpha) * 100) }}% learned).
+                    {% endif %}
+                </p>
+            </div>
+            <div>
+                <div class="text-sm text-forest/50 mb-2">Alpha Decay</div>
+                <div class="w-full bg-cream rounded-full h-3 overflow-hidden">
+                    <div class="h-full rounded-full transition-all"
+                         style="width: {{ "%.0f"|format((1 - ml_profile.alpha) * 100) }}%; background: linear-gradient(90deg, #FF8C69, #1A3C2B);">
+                    </div>
+                </div>
+                <div class="flex justify-between text-xs text-forest/40 mt-1">
+                    <span>Rules Only</span>
+                    <span>ML Only</span>
+                </div>
+                <div class="mt-3 text-xs text-forest/40">
+                    {{ ml_profile.total_clicks }} clicks, {{ ml_profile.total_saves }} saves across {{ ml_profile.total_impressions }} impressions
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Daily Breakdown Table -->
+    {% if metrics|length > 1 %}
+    <div class="bg-white border border-forest/10 rounded-lg overflow-hidden mb-8">
+        <div class="p-4 border-b border-forest/10">
+            <h2 class="font-heading text-lg font-semibold text-forest">Daily Breakdown</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-forest/10 text-forest/50">
+                        <th class="px-4 py-3 text-left font-medium source-badge">Date</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Impressions</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Clicks</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Saves</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">CTR</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">nDCG@10</th>
+                        <th class="px-4 py-3 text-right font-medium source-badge">Lift</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in metrics|reverse %}
+                    {% if m.total_impressions > 0 %}
+                    <tr class="border-b border-forest/5 hover:bg-cream/50">
+                        <td class="px-4 py-2.5 font-mono text-forest/70">{{ m.metric_date.strftime("%b %d") }}</td>
+                        <td class="px-4 py-2.5 text-right text-forest/70">{{ m.total_impressions }}</td>
+                        <td class="px-4 py-2.5 text-right text-coral">{{ m.total_clicks }}</td>
+                        <td class="px-4 py-2.5 text-right text-forest-light">{{ m.total_saves }}</td>
+                        <td class="px-4 py-2.5 text-right font-mono text-forest">{{ "%.1f"|format(m.ctr * 100) }}%</td>
+                        <td class="px-4 py-2.5 text-right font-mono text-forest">{{ "%.3f"|format(m.ndcg_at_10) }}</td>
+                        <td class="px-4 py-2.5 text-right font-mono text-forest">{{ "%.2f"|format(m.personalization_lift) }}x</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+    .metric-tooltip {
+        display: none;
+        position: absolute;
+        left: 50%;
+        top: calc(100% + 6px);
+        transform: translateX(-50%);
+        width: 220px;
+        padding: 8px 10px;
+        background: #1A3C2B;
+        color: #F7F7F5;
+        font-size: 11px;
+        line-height: 1.5;
+        border-radius: 6px;
+        z-index: 50;
+        pointer-events: none;
+    }
+    .metric-tooltip::before {
+        content: '';
+        position: absolute;
+        top: -4px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-bottom: 5px solid #1A3C2B;
+    }
+    .group:hover .metric-tooltip {
+        display: block;
+    }
+</style>
+{% endblock %}

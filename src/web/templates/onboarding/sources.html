@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Configure Sources — The AI Signal{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto mt-12">
+    <div class="text-center mb-10">
+        <div class="flex items-center justify-center gap-2 mb-4">
+            <span class="source-badge px-3 py-1 rounded border border-forest/20 text-forest/50">STEP 4 OF 4</span>
+        </div>
+        <h1 class="font-heading font-bold text-3xl text-forest headline-tracking">Adjust source priorities</h1>
+        <p class="text-forest/50 mt-2">Higher weight = more articles from that source in your digest.</p>
+    </div>
+
+    <form method="post" action="/onboarding/sources" class="space-y-4">
+        {{ csrf_input(request) | safe }}
+        {% for source in sources %}
+        <div class="corner-marker bg-white rounded-lg p-5 flex items-center justify-between">
+            <div>
+                <h3 class="font-heading font-semibold text-forest">{{ source.label }}</h3>
+                <p class="text-sm text-forest/40 mt-0.5">{{ source.description }}</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <input type="range" name="weight_{{ source.name }}" min="0" max="10"
+                    value="{{ default_weights.get(source.name, 5) }}"
+                    class="w-32"
+                    oninput="this.nextElementSibling.textContent = this.value">
+                <span class="text-sm font-mono w-6 text-center text-forest/60">{{ default_weights.get(source.name, 5) }}</span>
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="text-center mt-10">
+            <button type="submit" class="bg-coral text-white rounded px-10 py-2.5 font-heading font-semibold hover:bg-coral-dark transition">
+                Start Reading
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
