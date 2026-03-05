@@ -200,14 +200,77 @@ Fetch              Process                 Personalize            Deliver
 | GitHub | `src/fetchers/github_trending.py` | Trending ML repositories |
 | Anthropic Blog | `src/fetchers/anthropic_blog.py` | Anthropic's official blog |
 
-### Personalization Pipeline
+### Two-Tower Recommendation Architecture
 
-Two-layer scoring system blended via an alpha parameter:
+The personalization system uses a **two-tower architecture** where user preferences and article content are independently projected into a shared 1024-dimensional embedding space, then scored via cosine similarity.
 
-- **Rule-based**: `base_importance x role_weight x topic_match x level_filter x source_weight`
-- **ML-learned**: Behavioral weights on source, category, topic, difficulty, and entity features trained from user interactions
-- **Exploration**: Thompson sampling prevents filter bubbles by surfacing articles outside the user's typical preferences
-- **Alpha decay**: Starts at 1.0 (pure rules), decays toward 0.3 as the system collects user interaction data
+```
+Article Tower                          User Tower
+(pre-computed)                         (per-user MLP)
+
+title + summary                        engagement history
+      |                                       |
+      v                                       v
+mxbai-embed-large                      128-dim feature vector
+      |                                (pooled embeddings +
+      v                                 engagement stats)
+1024-dim embedding                            |
+      |                                       v
+      |                              Linear(128 -> 256) + ReLU
+      |                                       |
+      |                                       v
+      |                              Linear(256 -> 1024)
+      |                                       |
+      v                                       v
+  L2 normalize                           L2 normalize
+      |                                       |
+      +----------> cosine similarity <--------+
+                          |
+                          v
+                  embedding factor
+                    [0.3, 2.0]
+```
+
+**Article tower**: Each article is embedded using `mxbai-embed-large` (1024-dim) via Ollama. Input is `"{title} | {summary}"` — using the enthusiast-level LLM summary when available, falling back to the first 500 chars of raw content. Embeddings are pre-computed in batch and stored as float32 blobs.
+
+**User tower**: A lightweight 3-layer MLP trained per-user via contrastive learning (CosineEmbeddingLoss, margin=0.2). The 128-dim input feature vector is constructed from:
+
+| Feature Slice | Dimensions | Source |
+|---------------|------------|--------|
+| Saved article pool | 0-31 | Mean-pooled embeddings of 50 most recent saved articles, projected from 1024 to 32-dim |
+| Clicked article pool | 32-63 | Same projection for clicked (but not saved) articles |
+| Skipped article pool | 64-95 | Same projection for shown-but-not-engaged articles |
+| Engagement statistics | 96-127 | CTR, save rate, skip rate, interaction maturity, embedding coverage, diversity metrics |
+
+**Training**: Contrastive learning with saved/clicked articles as positives and skipped articles as negatives (3:1 negative sampling ratio). Requires at least 10 positive examples per user. Trained nightly with Adam (lr=0.001, 50 epochs).
+
+### Scoring & Blending
+
+Final article scores blend two independent scoring systems:
+
+**Rule-based score** (always computed):
+```
+score = base_importance x role_factor x topic_match x level_filter x source_weight
+```
+
+**ML-learned score** (when sufficient interaction data exists):
+```
+score = base x source_factor x category_factor x topic_factor
+        x difficulty_factor x entity_factor x embedding_factor
+```
+
+Where `embedding_factor` maps cosine similarity to a multiplicative boost: `1.0 + similarity`, clamped to [0.3, 2.0].
+
+**Blending**: `final = alpha x rule_score + (1 - alpha) x learned_score`
+
+Alpha decays exponentially with user interactions:
+- 0 interactions: alpha = 1.0 (pure rules)
+- 40 interactions: alpha ~ 0.65
+- 100+ interactions: alpha -> 0.3 (70% learned, 30% rule-based floor)
+
+**Exploration**: Thompson sampling surfaces articles outside the user's typical preferences to prevent filter bubbles.
+
+**Nightly adaptation loop**: Weight decay prevents stale preferences (decay rate scales with signal confidence), and metrics-driven adaptation adjusts alpha and learning rates if personalization lift or nDCG trends decline.
 
 ### Scheduled Jobs (UTC)
 
