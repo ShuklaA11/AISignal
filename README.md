@@ -6,9 +6,10 @@ A personalized AI news aggregator that fetches articles from multiple sources, p
 
 - **Multi-source aggregation** -- RSS feeds, arXiv papers, HuggingFace, Reddit, Twitter/X, GitHub trending repos, and Anthropic blog
 - **LLM-powered processing** -- Automatic summarization, categorization, topic tagging, and importance scoring via LiteLLM (supports Claude, OpenAI, Ollama)
-- **Personalized ranking** -- Hybrid rule-based + ML-learned scoring with Thompson sampling exploration
+- **Two-tower recommendation** -- Per-user MLP (128 -> 256 -> 1024) trained via contrastive learning against article embeddings (mxbai-embed-large, 1024-dim) for semantic preference matching
+- **Hybrid scoring** -- Rule-based scoring blended with ML-learned weights via alpha decay (starts 100% rules, shifts to 70% learned as interaction data grows)
 - **Role-based summaries** -- Three summary variants per article (student, industry, enthusiast) with on-demand difficulty adaptation (beginner, intermediate, advanced)
-- **Embedding-based similarity** -- Article embeddings for semantic matching and user preference modeling
+- **Thompson sampling exploration** -- Prevents filter bubbles by surfacing articles outside the user's typical preferences
 - **Email digests** -- Daily personalized digests with click tracking
 - **Analytics dashboard** -- CTR, nDCG@10, personalization lift, and per-user ML profile metrics
 - **Admin review interface** -- Approve/reject articles and edit summaries before sending
