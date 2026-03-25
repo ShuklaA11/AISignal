@@ -153,13 +153,20 @@ def store_articles(session: Session, raw_articles: list[RawArticle], existing_fp
     return new_count
 
 
+FETCHER_TIMEOUT = 120  # seconds per individual fetcher
+
+
 async def _timed_fetch(fetcher: BaseFetcher) -> tuple[BaseFetcher, list[RawArticle], int, str | None]:
     """Fetch from a single source, returning (fetcher, articles, duration_ms, error)."""
     t0 = time.monotonic()
     try:
-        articles = await fetcher.safe_fetch()
+        articles = await asyncio.wait_for(fetcher.safe_fetch(), timeout=FETCHER_TIMEOUT)
         duration_ms = int((time.monotonic() - t0) * 1000)
         return fetcher, articles, duration_ms, None
+    except asyncio.TimeoutError:
+        duration_ms = int((time.monotonic() - t0) * 1000)
+        logger.error(f"[{fetcher.source_name}] Timed out after {FETCHER_TIMEOUT}s")
+        return fetcher, [], duration_ms, f"timeout after {FETCHER_TIMEOUT}s"
     except Exception as e:
         duration_ms = int((time.monotonic() - t0) * 1000)
         logger.error(f"[{fetcher.source_name}] Unexpected error: {e}")

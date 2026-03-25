@@ -1,4 +1,4 @@
-# AI Signal
+# AISignal
 
 A personalized AI news aggregator that fetches articles from multiple sources, processes them with LLMs, and delivers personalized daily digests via email. Features ML-based personalization that learns from user behavior over time.
 
@@ -48,7 +48,7 @@ brew install ollama
 
 # Clone and set up
 git clone <repo-url>
-cd ai-newsletter
+cd aisignal
 
 python3.12 -m venv .venv
 source .venv/bin/activate
@@ -71,7 +71,7 @@ curl -fsSL https://ollama.ai/install.sh | sh
 
 # Clone and set up
 git clone <repo-url>
-cd ai-newsletter
+cd aisignal
 
 python3.12 -m venv .venv
 source .venv/bin/activate
@@ -92,7 +92,7 @@ ollama pull mxbai-embed-large
 
 # Clone and set up
 git clone <repo-url>
-cd ai-newsletter
+cd aisignal
 
 python -m venv .venv
 .venv\Scripts\activate

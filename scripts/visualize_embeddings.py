@@ -5,7 +5,7 @@ Shows that the embedding space captures meaningful semantic structure.
 """
 
 import sys
-sys.path.insert(0, "/Users/arnavshukla/ai_newsletter")
+sys.path.insert(0, "/Users/arnavshukla/aisignal")
 
 import numpy as np
 import matplotlib
@@ -17,8 +17,8 @@ from sqlmodel import Session, select, create_engine
 from src.storage.models import ArticleEmbedding, Article
 from collections import Counter
 
-DB_URL = "sqlite:////Users/arnavshukla/ai_newsletter/data/newsletter.db"
-OUTPUT_DIR = "/Users/arnavshukla/ai_newsletter/scripts"
+DB_URL = "sqlite:////Users/arnavshukla/aisignal/data/newsletter.db"
+OUTPUT_DIR = "/Users/arnavshukla/aisignal/scripts"
 
 
 def load_data():

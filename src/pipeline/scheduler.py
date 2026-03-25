@@ -22,12 +22,16 @@ def _log(msg: str, level: str = "info"):
 
 
 class SimpleScheduler:
-    """Lightweight asyncio scheduler that never silently dies."""
+    """Lightweight asyncio scheduler with watchdog recovery."""
+
+    WATCHDOG_INTERVAL = 300  # check every 5 minutes
 
     def __init__(self):
         self._tasks: list[asyncio.Task] = []
-        self._pending: list = []  # (factory_func,) — deferred until start()
+        self._factories: list = []  # coroutine factories for restart
+        self._pending: list = []  # deferred until start()
         self._running = False
+        self._watchdog_task: asyncio.Task | None = None
 
     def start(self):
         """Create all tasks on the *running* event loop, then mark as running."""
@@ -36,20 +40,41 @@ class SimpleScheduler:
         for factory in self._pending:
             task = loop.create_task(factory())
             self._tasks.append(task)
+            self._factories.append(factory)
         self._pending.clear()
-        _log(f"started {len(self._tasks)} task loops")
+        self._watchdog_task = loop.create_task(self._watchdog())
+        _log(f"started {len(self._tasks)} task loops + watchdog")
 
     def shutdown(self):
         self._running = False
+        if self._watchdog_task:
+            self._watchdog_task.cancel()
         for task in self._tasks:
             task.cancel()
 
-    def add_interval_job(self, coro_func, seconds: int, name: str, kwargs: dict | None = None, run_now: bool = False, initial_delay: int = 0):
+    async def _watchdog(self):
+        """Periodically check for dead tasks and restart them."""
+        while self._running:
+            try:
+                await asyncio.sleep(self.WATCHDOG_INTERVAL)
+            except asyncio.CancelledError:
+                return
+
+            for i, task in enumerate(self._tasks):
+                if task.done() and self._running:
+                    exc = task.exception() if not task.cancelled() else None
+                    reason = f"exception: {exc}" if exc else "cancelled or finished"
+                    _log(f"watchdog: task {i} died ({reason}) — restarting", "warning")
+                    new_task = asyncio.get_event_loop().create_task(self._factories[i]())
+                    self._tasks[i] = new_task
+
+    def add_interval_job(self, coro_func, seconds: int, name: str, kwargs: dict | None = None, run_now: bool = False, initial_delay: int = 0, timeout: int | None = None):
         """Schedule a coroutine to run at a fixed interval.
 
         If run_now=True, runs once immediately, then every `seconds`.
         If initial_delay>0, waits that many seconds before the first run,
         then every `seconds` after that.
+        If timeout is set, each run is killed after that many seconds.
         """
         scheduler = self
 
@@ -60,12 +85,19 @@ class SimpleScheduler:
                 await asyncio.sleep(seconds)
 
             while scheduler._running:
-                await _safe_run(coro_func, name, kwargs)
-                await asyncio.sleep(seconds)
+                try:
+                    await _safe_run(coro_func, name, kwargs, timeout=timeout)
+                except Exception as e:
+                    _log(f"{name}: loop-level error — {e}", "error")
+                try:
+                    await asyncio.sleep(seconds)
+                except asyncio.CancelledError:
+                    _log(f"{name}: sleep cancelled, exiting loop")
+                    return
 
         self._pending.append(_loop)
 
-    def add_daily_job(self, coro_func, hour: int, minute: int, name: str, kwargs: dict | None = None):
+    def add_daily_job(self, coro_func, hour: int, minute: int, name: str, kwargs: dict | None = None, timeout: int | None = 300):
         """Schedule a coroutine to run daily at a specific local time."""
         scheduler = self
 
@@ -77,19 +109,31 @@ class SimpleScheduler:
                     target += timedelta(days=1)
                 wait_seconds = (target - now).total_seconds()
                 _log(f"{name}: next run at {target.strftime('%H:%M')} local ({wait_seconds / 3600:.1f}h from now)")
-                await asyncio.sleep(wait_seconds)
+                try:
+                    await asyncio.sleep(wait_seconds)
+                except asyncio.CancelledError:
+                    _log(f"{name}: sleep cancelled, exiting loop")
+                    return
                 if scheduler._running:
-                    await _safe_run(coro_func, name, kwargs)
+                    try:
+                        await _safe_run(coro_func, name, kwargs, timeout=timeout)
+                    except Exception as e:
+                        _log(f"{name}: loop-level error — {e}", "error")
 
         self._pending.append(_loop)
 
 
-async def _safe_run(coro_func, name: str, kwargs: dict | None = None):
-    """Run a job coroutine with full error protection."""
+async def _safe_run(coro_func, name: str, kwargs: dict | None = None, timeout: int | None = None):
+    """Run a job coroutine with full error protection and optional timeout."""
     try:
         _log(f"{name}: starting")
-        await coro_func(**(kwargs or {}))
+        if timeout:
+            await asyncio.wait_for(coro_func(**(kwargs or {})), timeout=timeout)
+        else:
+            await coro_func(**(kwargs or {}))
         _log(f"{name}: completed")
+    except asyncio.TimeoutError:
+        _log(f"{name}: TIMED OUT after {timeout}s — skipping this run", "error")
     except asyncio.CancelledError:
         _log(f"{name}: cancelled")
         raise
@@ -103,18 +147,21 @@ def setup_scheduler(settings: Settings) -> SimpleScheduler:
     # Heartbeat every 15 min
     scheduler.add_interval_job(
         _heartbeat, seconds=900, name="heartbeat", run_now=True,
+        timeout=30,
     )
 
     # Fetch all sources every 2 hours, immediately on startup
     scheduler.add_interval_job(
         _run_fetch, seconds=7200, name="fetch",
         kwargs={"settings": settings}, run_now=True,
+        timeout=600,
     )
 
     # LLM processing every 30 min, staggered 5 min after startup
     scheduler.add_interval_job(
         _run_process, seconds=1800, name="process",
         kwargs={"settings": settings}, run_now=False, initial_delay=300,
+        timeout=900,
     )
 
     # Nightly jobs

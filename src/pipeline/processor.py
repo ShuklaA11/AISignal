@@ -86,6 +86,11 @@ async def run_processing(settings: Settings | None = None, batch_size: int | Non
     llm = LLMProvider(settings)
     batch_size = batch_size or settings.llm.batch_size
 
+    # Fast-fail if the LLM backend is unreachable (avoids 290 × 120s timeout spiral)
+    if not await llm.health_check():
+        logger.error(f"LLM backend unreachable ({llm.model}). Skipping processing run.")
+        return 0
+
     with session_scope(settings.database_url) as session:
         raw_articles = get_articles_by_status(session, "raw", limit=500)
         if not raw_articles:
@@ -94,8 +99,15 @@ async def run_processing(settings: Settings | None = None, batch_size: int | Non
 
         logger.info(f"Processing {len(raw_articles)} articles in batches of {batch_size}...")
         processed_count = 0
+        consecutive_failures = 0
 
         for i in range(0, len(raw_articles), batch_size):
+            # If 3 batches fail in a row, the backend is probably down — bail out
+            if consecutive_failures >= 3:
+                remaining = len(raw_articles) - i
+                logger.error(f"3 consecutive batch failures — aborting. {remaining} articles remain as 'raw'.")
+                break
+
             batch = raw_articles[i : i + batch_size]
             logger.info(f"Processing batch {i // batch_size + 1} ({len(batch)} articles)...")
 
@@ -110,10 +122,13 @@ async def run_processing(settings: Settings | None = None, batch_size: int | Non
                         await asyncio.sleep(2 ** attempt)  # Exponential backoff: 2s, 4s
 
             if results is None:
+                consecutive_failures += 1
                 titles = [a.title[:50] for a in batch]
                 logger.error(f"Batch permanently failed after {MAX_BATCH_RETRIES} retries. "
                              f"Articles remain as 'raw' for next run: {titles}")
                 continue
+            else:
+                consecutive_failures = 0
 
             # Map results back to articles by index
             results_by_index = {r.get("index", -1): r for r in results}

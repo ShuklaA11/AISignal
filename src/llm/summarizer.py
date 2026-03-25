@@ -55,8 +55,14 @@ def parse_batch_response(raw_response: str, expected_count: int) -> list[dict[st
         logger.error(f"Failed to parse LLM response as JSON: {text[:200]}...")
         return []
 
+    if isinstance(results, dict):
+        # Some models (e.g. Ollama with format="json") return a single object
+        # instead of an array for batch-of-1 or when constrained to JSON output.
+        # Wrap it so the rest of the pipeline works.
+        results = [results]
+
     if not isinstance(results, list):
-        logger.error("LLM response is not a JSON array")
+        logger.error("LLM response is not a JSON array or object")
         return []
 
     return results

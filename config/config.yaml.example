@@ -1,5 +1,5 @@
 # =============================================================================
-# AI Newsletter Configuration
+# AISignal Configuration
 # =============================================================================
 # Environment variable overrides use the NEWSLETTER_ prefix with double
 # underscores for nested values:
