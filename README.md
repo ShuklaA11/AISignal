@@ -1,4 +1,4 @@
-# AI Newsletter
+# AI Signal
 
 A personalized AI news aggregator that fetches articles from multiple sources, processes them with LLMs, and delivers personalized daily digests via email. Features ML-based personalization that learns from user behavior over time.
 
