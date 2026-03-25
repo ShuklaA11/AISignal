@@ -46,13 +46,13 @@ class LLMFallback(BaseModel):
 
 class LLMSettings(BaseModel):
     provider: str = "ollama"
-    model: str = "llama3.1:8b"
+    model: str = "qwen3.5:4b"
     fallbacks: list[LLMFallback] = Field(default_factory=list)
     max_tokens_per_article: int = 500
     max_daily_cost_usd: float = 2.0
     temperature: float = 0.3
-    batch_size: int = 10
-    concurrent_requests: int = 3
+    batch_size: int = 5
+    concurrent_requests: int = 1
 
 
 class EmailSettings(BaseModel):
@@ -139,7 +139,7 @@ class Settings(BaseSettings):
     twitter_bearer_token: str = ""
     reddit_client_id: str = ""
     reddit_client_secret: str = ""
-    reddit_user_agent: str = "ai-newsletter/1.0"
+    reddit_user_agent: str = "aisignal/1.0"
     resend_api_key: str = ""
 
 

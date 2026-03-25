@@ -1,1 +1,1 @@
-"""AI Newsletter: personalized AI news aggregation and delivery platform."""
+"""AISignal: personalized AI news aggregation and delivery platform."""

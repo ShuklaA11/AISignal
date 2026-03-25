@@ -39,7 +39,7 @@ class AnthropicBlogFetcher(BaseFetcher):
             resp = await client.get(
                 ANTHROPIC_NEWS_URL,
                 headers={
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ai-newsletter/1.0",
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) aisignal/1.0",
                 },
             )
             resp.raise_for_status()
