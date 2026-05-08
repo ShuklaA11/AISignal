@@ -13,7 +13,15 @@ DAILY_PAPERS_URL = "https://huggingface.co/api/daily_papers"
 
 
 class HuggingFaceFetcher(BaseFetcher):
-    """Fetches daily trending papers from HuggingFace's papers API."""
+    """Fetches daily trending papers from HuggingFace's papers API.
+
+    Tagged as primary research signal — community-voted papers with higher
+    signal-to-noise than the raw arXiv firehose.
+    """
+
+    section = "research"
+    audience_tags = ("researcher", "industry", "student")
+    quality_weight = 1.6
 
     def __init__(self, limit: int = 100):
         self.limit = limit

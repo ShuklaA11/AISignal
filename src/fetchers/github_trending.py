@@ -50,7 +50,16 @@ AI_KEYWORDS = {
 
 
 class GitHubTrendingFetcher(BaseFetcher):
-    """Scrapes GitHub's trending page for AI/ML repositories."""
+    """Scrapes GitHub's trending page for AI/ML repositories.
+
+    Tagged builder — these are tools, libraries, and projects practitioners
+    actually use. Curated GitHub releases (Phase 2B) will live in this same
+    section with higher quality_weight.
+    """
+
+    section = "builder"
+    audience_tags = ("industry", "enthusiast")
+    quality_weight = 1.0
 
     @property
     def source_name(self) -> str:

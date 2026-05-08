@@ -25,6 +25,10 @@ class AnthropicBlogFetcher(BaseFetcher):
     rather than relying on an RSS feed (which Anthropic does not provide).
     """
 
+    section = "releases"
+    audience_tags = ("industry", "enthusiast", "researcher")
+    quality_weight = 1.5
+
     @property
     def source_name(self) -> str:
         return "anthropic_blog"

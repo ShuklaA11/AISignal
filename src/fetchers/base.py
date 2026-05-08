@@ -6,6 +6,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import ClassVar
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,19 @@ class RawArticle:
 
 
 class BaseFetcher(ABC):
-    """All fetchers implement this interface."""
+    """All fetchers implement this interface.
+
+    Subclasses set the section metadata via class attributes (or instance
+    attributes for dynamic fetchers like RSS that vary per construction).
+    safe_fetch() then applies those defaults to any RawArticle that left
+    its own section/audience/quality fields at the neutral baseline. This
+    way the section taxonomy is automatic for every fetcher.
+    """
+
+    # Class attribute defaults — subclasses override (or instances shadow).
+    section: ClassVar[str | None] = None
+    audience_tags: ClassVar[tuple[str, ...] | list[str]] = ()
+    quality_weight: ClassVar[float] = 1.0
 
     @abstractmethod
     async def fetch(self) -> list[RawArticle]:
@@ -55,12 +68,26 @@ class BaseFetcher(ABC):
     def source_type(self) -> str:
         return "api"
 
+    def _apply_default_tags(self, articles: list[RawArticle]) -> None:
+        """Fill section/audience/quality on articles still at the neutral
+        baseline. Per-article values set by the fetcher always win."""
+        for a in articles:
+            if a.section is None and self.section is not None:
+                a.section = self.section
+            if not a.audience_tags and self.audience_tags:
+                a.audience_tags = list(self.audience_tags)
+            # Treat 1.0 as "unset" — explicit override (e.g. 0.5 to suppress)
+            # is preserved either way because the fetcher's own kwarg sets it.
+            if a.quality_weight == 1.0 and self.quality_weight != 1.0:
+                a.quality_weight = self.quality_weight
+
     async def safe_fetch(self) -> list[RawArticle]:
         """Fetch with retry and error handling — never crashes the pipeline."""
         last_error = None
         for attempt in range(1, MAX_FETCH_RETRIES + 1):
             try:
                 articles = await self.fetch()
+                self._apply_default_tags(articles)
                 logger.info(f"[{self.source_name}] Fetched {len(articles)} articles")
                 return articles
             except Exception as e:

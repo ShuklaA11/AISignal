@@ -12,7 +12,15 @@ logger = logging.getLogger(__name__)
 
 
 class ArxivFetcher(BaseFetcher):
-    """Fetches recent papers from arXiv using the arxiv Python library."""
+    """Fetches recent papers from arXiv using the arxiv Python library.
+
+    Tagged research, but downweighted — HF Daily Papers is the primary
+    research signal and arXiv functions as a high-recall fallback.
+    """
+
+    section = "research"
+    audience_tags = ("researcher",)
+    quality_weight = 0.7
 
     def __init__(self, categories: list[str] | None = None, max_results: int = 100):
         self.categories = categories or ["cs.AI", "cs.CL", "cs.CV", "cs.LG"]
