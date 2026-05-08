@@ -3,14 +3,14 @@
 Verifies that section weights from config and per-article quality_weight
 are folded into score_article_for_user without breaking existing factors.
 """
-import json
+
 from unittest.mock import patch
 
 import pytest
 
+from src.personalization.scorer import score_article_for_user
 from src.sections import SECTION_BUILDER, SECTION_RESEARCH
 from src.storage.models import Article, User
-from src.personalization.scorer import score_article_for_user
 
 
 def _user(role: str = "enthusiast") -> User:
@@ -49,16 +49,27 @@ def _article(
 
 def _patched_settings(weights: dict) -> "patch":
     """Patch load_settings() in the scorer to return a stub with given weights."""
+
     class StubSettings:
         section_weights = weights
 
         def get_section_weights(self, role: str) -> dict[str, float]:
             from src.sections import ALL_SECTIONS
-            neutral = {s: 1.0 for s in ALL_SECTIONS}
-            profile = self.section_weights.get(role) or self.section_weights.get("default") or {}
-            return {**neutral, **{k: v for k, v in profile.items() if k in ALL_SECTIONS}}
 
-    return patch("src.personalization.scorer.load_settings", return_value=StubSettings())
+            neutral = {s: 1.0 for s in ALL_SECTIONS}
+            profile = (
+                self.section_weights.get(role)
+                or self.section_weights.get("default")
+                or {}
+            )
+            return {
+                **neutral,
+                **{k: v for k, v in profile.items() if k in ALL_SECTIONS},
+            }
+
+    return patch(
+        "src.personalization.scorer.load_settings", return_value=StubSettings()
+    )
 
 
 @pytest.mark.unit
@@ -75,11 +86,13 @@ def test_section_weight_boosts_score_for_matching_role() -> None:
     """A role's heavy section ranks higher than a neutral default."""
     with _patched_settings({"researcher": {SECTION_RESEARCH: 1.8}}):
         boosted = score_article_for_user(
-            _article(section=SECTION_RESEARCH), _user(role="researcher"),
+            _article(section=SECTION_RESEARCH),
+            _user(role="researcher"),
         )
     with _patched_settings({}):
         neutral = score_article_for_user(
-            _article(section=SECTION_RESEARCH), _user(role="researcher"),
+            _article(section=SECTION_RESEARCH),
+            _user(role="researcher"),
         )
     assert boosted > neutral
 
@@ -88,11 +101,13 @@ def test_section_weight_boosts_score_for_matching_role() -> None:
 def test_section_weight_suppresses_score_when_below_one() -> None:
     with _patched_settings({"industry": {SECTION_RESEARCH: 0.5}}):
         suppressed = score_article_for_user(
-            _article(section=SECTION_RESEARCH), _user(role="industry"),
+            _article(section=SECTION_RESEARCH),
+            _user(role="industry"),
         )
     with _patched_settings({}):
         neutral = score_article_for_user(
-            _article(section=SECTION_RESEARCH), _user(role="industry"),
+            _article(section=SECTION_RESEARCH),
+            _user(role="industry"),
         )
     assert suppressed < neutral
 
@@ -101,13 +116,16 @@ def test_section_weight_suppresses_score_when_below_one() -> None:
 def test_quality_weight_multiplies_into_score() -> None:
     with _patched_settings({}):
         high_quality = score_article_for_user(
-            _article(section=SECTION_BUILDER, quality_weight=2.0), _user(),
+            _article(section=SECTION_BUILDER, quality_weight=2.0),
+            _user(),
         )
         baseline = score_article_for_user(
-            _article(section=SECTION_BUILDER, quality_weight=1.0), _user(),
+            _article(section=SECTION_BUILDER, quality_weight=1.0),
+            _user(),
         )
         low_quality = score_article_for_user(
-            _article(section=SECTION_BUILDER, quality_weight=0.5), _user(),
+            _article(section=SECTION_BUILDER, quality_weight=0.5),
+            _user(),
         )
     assert high_quality > baseline > low_quality
 
@@ -117,10 +135,12 @@ def test_quality_weight_clamped_to_safe_range() -> None:
     """quality_weight is clamped to [0.5, 2.0] like other factors."""
     with _patched_settings({}):
         absurd_high = score_article_for_user(
-            _article(quality_weight=99.0), _user(),
+            _article(quality_weight=99.0),
+            _user(),
         )
         capped_high = score_article_for_user(
-            _article(quality_weight=2.0), _user(),
+            _article(quality_weight=2.0),
+            _user(),
         )
     assert absurd_high == capped_high
 
@@ -134,10 +154,12 @@ def test_role_specific_weights_override_default() -> None:
     }
     with _patched_settings(weights):
         researcher_score = score_article_for_user(
-            _article(section=SECTION_RESEARCH), _user(role="researcher"),
+            _article(section=SECTION_RESEARCH),
+            _user(role="researcher"),
         )
         other_score = score_article_for_user(
-            _article(section=SECTION_RESEARCH), _user(role="anyone_else"),
+            _article(section=SECTION_RESEARCH),
+            _user(role="anyone_else"),
         )
     assert researcher_score > other_score
 

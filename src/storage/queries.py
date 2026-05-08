@@ -1,17 +1,26 @@
 import re
 from datetime import date, datetime, timedelta
-from typing import Optional
 
 from sqlmodel import Session, select
 
 from src.storage.models import (
-    Article, ArticleSummary, Digest, DigestArticle, DigestClick,
-    FeedImpression, FetchRun, ReadArticle, SavedArticle, User, UserMLProfile,
+    Article,
+    ArticleSummary,
+    Digest,
+    DigestClick,
+    FeedImpression,
+    FetchRun,
+    ReadArticle,
+    SavedArticle,
+    User,
+    UserMLProfile,
     utcnow,
 )
 
 
-def get_articles_by_status(session: Session, status: str, limit: int = 100) -> list[Article]:
+def get_articles_by_status(
+    session: Session, status: str, limit: int = 100
+) -> list[Article]:
     """Return articles with the given status, newest first."""
     stmt = (
         select(Article)
@@ -44,8 +53,8 @@ _RE_WHITESPACE = re.compile(r"\s+")
 def _normalize_title(title: str) -> str:
     """Normalize a title for dedup: lowercase, strip punctuation/whitespace."""
     t = title.lower().strip()
-    t = _RE_PUNCTUATION.sub("", t)   # remove punctuation
-    t = _RE_WHITESPACE.sub(" ", t)   # collapse whitespace
+    t = _RE_PUNCTUATION.sub("", t)  # remove punctuation
+    t = _RE_WHITESPACE.sub(" ", t)  # collapse whitespace
     return t
 
 
@@ -110,7 +119,9 @@ def get_active_users(session: Session) -> list[User]:
     return list(session.exec(stmt).all())
 
 
-def get_digest_for_user_date(session: Session, user_id: int, digest_date: date) -> Digest | None:
+def get_digest_for_user_date(
+    session: Session, user_id: int, digest_date: date
+) -> Digest | None:
     """Return the digest for a user on a specific date, or None."""
     stmt = (
         select(Digest)
@@ -182,7 +193,9 @@ def mark_article_read(session: Session, user_id: int, article_id: int) -> None:
     session.commit()
 
 
-def get_read_articles_for_user(session: Session, user_id: int, limit: int = 50) -> list[Article]:
+def get_read_articles_for_user(
+    session: Session, user_id: int, limit: int = 50
+) -> list[Article]:
     """Return recently read articles for a user, newest reads first."""
     stmt = (
         select(Article)
@@ -197,6 +210,7 @@ def get_read_articles_for_user(session: Session, user_id: int, limit: int = 50) 
 # ---------------------------------------------------------------------------
 # ML / Impression queries
 # ---------------------------------------------------------------------------
+
 
 def get_or_create_ml_profile(session: Session, user_id: int) -> UserMLProfile:
     """Fetch existing ML profile or create a new one."""
@@ -217,7 +231,10 @@ def get_ml_profile(session: Session, user_id: int) -> UserMLProfile | None:
 
 
 def record_impressions(
-    session: Session, user_id: int, article_ids: list[int], feed_group: str,
+    session: Session,
+    user_id: int,
+    article_ids: list[int],
+    feed_group: str,
     feed_view: str = "",
 ) -> None:
     """Batch-record that articles were shown to a user.
@@ -304,7 +321,9 @@ def update_impression_saved(session: Session, user_id: int, article_id: int) -> 
     return False
 
 
-def get_impression_feedback(session: Session, user_id: int, article_id: int) -> tuple[bool, bool]:
+def get_impression_feedback(
+    session: Session, user_id: int, article_id: int
+) -> tuple[bool, bool]:
     """Return (liked, disliked) state of the most recent impression."""
     stmt = (
         select(FeedImpression)
@@ -360,7 +379,9 @@ def update_impression_disliked(session: Session, user_id: int, article_id: int) 
     return False
 
 
-def update_impression_feedback_cleared(session: Session, user_id: int, article_id: int) -> None:
+def update_impression_feedback_cleared(
+    session: Session, user_id: int, article_id: int
+) -> None:
     """Clear both liked and disliked on the most recent impression."""
     stmt = (
         select(FeedImpression)
@@ -379,7 +400,9 @@ def update_impression_feedback_cleared(session: Session, user_id: int, article_i
 def get_article_embeddings(session: Session, article_ids: list[int]) -> dict:
     """Bulk-load embeddings for articles. Returns {article_id: numpy_vector}."""
     import numpy as np
+
     from src.storage.models import ArticleEmbedding
+
     if not article_ids:
         return {}
     stmt = select(ArticleEmbedding).where(ArticleEmbedding.article_id.in_(article_ids))
@@ -393,6 +416,7 @@ def get_article_embeddings(session: Session, article_ids: list[int]) -> dict:
 def get_metrics_for_user(session: Session, user_id: int, days: int = 30) -> list:
     """Return daily metrics for the past N days."""
     from src.storage.models import ScoringMetric
+
     cutoff = utcnow() - timedelta(days=days)
     stmt = (
         select(ScoringMetric)
@@ -409,7 +433,9 @@ def get_aggregate_daily_metrics(session: Session, days: int = 30) -> list[dict]:
     Groups by metric_date, averages CTR/save_rate/nDCG/lift, sums totals.
     """
     from sqlmodel import func as sqlfunc
+
     from src.storage.models import ScoringMetric
+
     cutoff = utcnow() - timedelta(days=days)
     stmt = (
         select(
@@ -464,7 +490,6 @@ def get_fetch_health(session: Session, days: int = 14) -> dict:
             "daily": [{date, total_fetched, total_new, source_counts: {}}],
         }
     """
-    from sqlmodel import func as sqlfunc
 
     cutoff = utcnow() - timedelta(days=days)
 
@@ -508,7 +533,9 @@ def get_fetch_health(session: Session, days: int = 14) -> dict:
 
     # Compute avg_duration_ms
     for src, s in per_source.items():
-        s["avg_duration_ms"] = s["total_duration_ms"] // s["total_runs"] if s["total_runs"] else 0
+        s["avg_duration_ms"] = (
+            s["total_duration_ms"] // s["total_runs"] if s["total_runs"] else 0
+        )
         del s["total_duration_ms"]
 
     # Daily totals
@@ -516,7 +543,12 @@ def get_fetch_health(session: Session, days: int = 14) -> dict:
     for run in runs:
         d = run.fetched_at.date()
         if d not in daily_map:
-            daily_map[d] = {"date": d, "total_fetched": 0, "total_new": 0, "source_counts": {}}
+            daily_map[d] = {
+                "date": d,
+                "total_fetched": 0,
+                "total_new": 0,
+                "source_counts": {},
+            }
         daily_map[d]["total_fetched"] += run.articles_fetched
         daily_map[d]["total_new"] += run.articles_new
         sc = daily_map[d]["source_counts"]
@@ -533,11 +565,17 @@ def get_fetch_health(session: Session, days: int = 14) -> dict:
 
 # ── Token queries ──────────────────────────────────────────────────────
 
+
 def create_token(
-    session: Session, user_id: int, token_type: str, token_hash: str, expires_at: datetime,
+    session: Session,
+    user_id: int,
+    token_type: str,
+    token_hash: str,
+    expires_at: datetime,
 ) -> "Token":
     """Create and persist a new one-time-use token (email verification or password reset)."""
     from src.storage.models import Token
+
     token = Token(
         user_id=user_id,
         token_type=token_type,
@@ -553,6 +591,7 @@ def create_token(
 def get_token_by_hash(session: Session, token_hash: str, token_type: str):
     """Look up a valid (unused, unexpired) token by its hash and type."""
     from src.storage.models import Token
+
     stmt = (
         select(Token)
         .where(Token.token_hash == token_hash)
@@ -573,6 +612,7 @@ def mark_token_used(session: Session, token) -> None:
 def invalidate_user_tokens(session: Session, user_id: int, token_type: str) -> None:
     """Mark all unused tokens of a given type for a user as used."""
     from src.storage.models import Token
+
     stmt = (
         select(Token)
         .where(Token.user_id == user_id)
@@ -588,8 +628,13 @@ def invalidate_user_tokens(session: Session, user_id: int, token_type: str) -> N
 
 # ── Digest click tracking ──────────────────────────────────────────────
 
+
 def record_digest_click(
-    session: Session, user_id: int, article_id: int, digest_id: int, section: str = "main",
+    session: Session,
+    user_id: int,
+    article_id: int,
+    digest_id: int,
+    section: str = "main",
 ) -> DigestClick:
     """Record that a user clicked an article link in a digest email."""
     click = DigestClick(
@@ -606,7 +651,9 @@ def record_digest_click(
 def cleanup_expired_tokens(session: Session) -> int:
     """Delete expired and used tokens. Returns the number of tokens removed."""
     from sqlalchemy import delete as sa_delete
+
     from src.storage.models import Token
+
     now = utcnow()
     stmt = sa_delete(Token).where(
         (Token.expires_at <= now) | (Token.used_at != None)  # noqa: E711

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from sqlmodel import Session, SQLModel, create_engine
 
-from src.config import DATA_DIR, load_settings
+from src.config import load_settings
 
 _engine = None
 _engine_lock = threading.Lock()
@@ -54,14 +54,17 @@ def init_db(database_url: str | None = None) -> None:
     alembic_dir = Path(__file__).parent.parent.parent / "alembic"
     if alembic_dir.exists():
         try:
-            from alembic import command
             from alembic.config import Config
+
+            from alembic import command
+
             alembic_cfg = Config(str(alembic_dir.parent / "alembic.ini"))
             alembic_cfg.set_main_option("sqlalchemy.url", str(engine.url))
             command.upgrade(alembic_cfg, "head")
             return
         except Exception as e:
             import logging as _logging
+
             _logging.getLogger(__name__).error(f"Alembic migration failed: {e}")
             raise
 

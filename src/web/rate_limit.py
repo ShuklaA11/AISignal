@@ -25,8 +25,7 @@ class RateLimiter:
         """Remove all expired entries to bound memory usage."""
         cutoff = time.monotonic() - self.window_seconds
         expired_keys = [
-            k for k, v in self._attempts.items()
-            if not any(t > cutoff for t in v)
+            k for k, v in self._attempts.items() if not any(t > cutoff for t in v)
         ]
         for k in expired_keys:
             del self._attempts[k]

@@ -10,29 +10,15 @@ Covers:
 """
 
 import json
-import math
-from datetime import datetime, timedelta
-from unittest.mock import patch
+from datetime import timedelta
 
 import numpy as np
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
-from src.storage.models import (
-    Article, FeedImpression, ScoringMetric, User, UserMLProfile, utcnow,
-)
-from src.personalization.scorer import (
-    ALPHA_PURE_RULES_THRESHOLD,
-    DEFAULT_IMPORTANCE,
-    LEVEL_DIFFICULTY_WEIGHTS,
-    MAX_SCORE,
-    MAX_TOPIC_FACTOR,
-    ROLE_CATEGORY_WEIGHTS,
-    SOURCE_WEIGHT_BASELINE,
-    TOPIC_MATCH_BOOST,
-    _compute_learned_score,
-    score_article_for_user,
-    score_article_for_user_ml,
+from src.embeddings.similarity import (
+    compute_embedding_factor,
+    cosine_similarity,
 )
 from src.personalization.learner import (
     _ema,
@@ -45,15 +31,30 @@ from src.personalization.learner import (
     update_on_like,
     update_on_save,
 )
-from src.embeddings.similarity import (
-    compute_embedding_factor,
-    cosine_similarity,
+from src.personalization.scorer import (
+    ALPHA_PURE_RULES_THRESHOLD,
+    DEFAULT_IMPORTANCE,
+    LEVEL_DIFFICULTY_WEIGHTS,
+    MAX_SCORE,
+    MAX_TOPIC_FACTOR,
+    ROLE_CATEGORY_WEIGHTS,
+    _compute_learned_score,
+    score_article_for_user,
+    score_article_for_user_ml,
 )
-
+from src.storage.models import (
+    Article,
+    FeedImpression,
+    ScoringMetric,
+    User,
+    UserMLProfile,
+    utcnow,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def engine():
@@ -70,8 +71,11 @@ def session(engine):
 
 
 def make_user(
-    role="enthusiast", level="intermediate", topics=None,
-    source_prefs=None, **kwargs,
+    role="enthusiast",
+    level="intermediate",
+    topics=None,
+    source_prefs=None,
+    **kwargs,
 ) -> User:
     topics = topics or []
     source_prefs = source_prefs or {}
@@ -86,8 +90,12 @@ def make_user(
 
 
 def make_article(
-    source_name="techcrunch", category="product", topics=None,
-    difficulty="intermediate", base_importance=7.0, **kwargs,
+    source_name="techcrunch",
+    category="product",
+    topics=None,
+    difficulty="intermediate",
+    base_importance=7.0,
+    **kwargs,
 ) -> Article:
     topics = topics or []
     return Article(
@@ -107,9 +115,16 @@ def make_article(
 
 
 def make_ml_profile(
-    user_id=1, alpha=0.5, clicks=50, saves=10,
-    source_weights=None, category_weights=None, topic_weights=None,
-    difficulty_weights=None, entity_weights=None, lr_override=None,
+    user_id=1,
+    alpha=0.5,
+    clicks=50,
+    saves=10,
+    source_weights=None,
+    category_weights=None,
+    topic_weights=None,
+    difficulty_weights=None,
+    entity_weights=None,
+    lr_override=None,
 ) -> UserMLProfile:
     return UserMLProfile(
         user_id=user_id,
@@ -129,6 +144,7 @@ def make_ml_profile(
 # 1. Rule-based scoring
 # ===========================================================================
 
+
 class TestRuleBasedScoring:
     """Test score_article_for_user (pure rule-based)."""
 
@@ -136,7 +152,9 @@ class TestRuleBasedScoring:
         """Enthusiast with no topics/source prefs → factors are all ~1.0."""
         user = make_user(role="enthusiast", level="intermediate")
         article = make_article(
-            category="opinion", difficulty="intermediate", base_importance=5.0,
+            category="opinion",
+            difficulty="intermediate",
+            base_importance=5.0,
         )
         score = score_article_for_user(article, user)
         # opinion weight for enthusiast = 1.0, level match = 1.2,
@@ -242,13 +260,16 @@ class TestRuleBasedScoring:
     def test_score_capped_at_max(self):
         """Score never exceeds MAX_SCORE (20.0)."""
         user = make_user(
-            role="student", level="advanced",
+            role="student",
+            level="advanced",
             topics=["NLP", "Computer Vision", "RL"],
             source_prefs={"arxiv": 10},
         )
         article = make_article(
-            source_name="arxiv", category="research",
-            difficulty="advanced", base_importance=10.0,
+            source_name="arxiv",
+            category="research",
+            difficulty="advanced",
+            base_importance=10.0,
             topics=["NLP", "Computer Vision", "RL"],
         )
         score = score_article_for_user(article, user)
@@ -277,6 +298,7 @@ class TestRuleBasedScoring:
 # ===========================================================================
 # 2. ML-blended scoring
 # ===========================================================================
+
 
 class TestMLBlendedScoring:
     """Test score_article_for_user_ml (alpha blending)."""
@@ -332,8 +354,12 @@ class TestMLBlendedScoring:
             alpha=0.5,
             source_weights={"arxiv": 1.5},
         )
-        score_neutral = score_article_for_user_ml(article, user, profile, embedding_factor=1.0)
-        score_boosted = score_article_for_user_ml(article, user, profile, embedding_factor=1.5)
+        score_neutral = score_article_for_user_ml(
+            article, user, profile, embedding_factor=1.0
+        )
+        score_boosted = score_article_for_user_ml(
+            article, user, profile, embedding_factor=1.5
+        )
         assert score_boosted > score_neutral
 
     def test_learned_score_uses_max_topic_weight(self):
@@ -346,7 +372,8 @@ class TestMLBlendedScoring:
         # Should use NLP weight (2.5), not average (1.5) or RL (0.5)
         profile_nlp_only = make_ml_profile(topic_weights={"NLP": 2.5})
         score_nlp = _compute_learned_score(
-            make_article(topics=["NLP"]), profile_nlp_only,
+            make_article(topics=["NLP"]),
+            profile_nlp_only,
         )
         # Both should use 2.5 as the topic factor
         assert score == score_nlp
@@ -355,6 +382,7 @@ class TestMLBlendedScoring:
 # ===========================================================================
 # 3. EMA learning
 # ===========================================================================
+
 
 class TestEMALearning:
     """Test the exponential moving average update mechanics."""
@@ -413,6 +441,7 @@ class TestEMALearning:
 # 4. Learning rate tiers
 # ===========================================================================
 
+
 class TestLearningRateTiers:
     """Test interaction-count-based learning rate schedule."""
 
@@ -446,6 +475,7 @@ class TestLearningRateTiers:
 # 5. Alpha decay
 # ===========================================================================
 
+
 class TestAlphaDecay:
     """Test the rule-vs-learned blending weight decay."""
 
@@ -477,6 +507,7 @@ class TestAlphaDecay:
 # ===========================================================================
 # 6. Full learning integration (with DB)
 # ===========================================================================
+
 
 class TestLearningWithDB:
     """Test update_on_click/save/like/dislike with real DB sessions."""
@@ -526,8 +557,9 @@ class TestLearningWithDB:
         """Like signal (+1.5) produces a bigger weight shift than click (+0.5)."""
         user = make_user(id=1)
         a1 = make_article(id=1, source_name="src_a", category="research")
-        a2 = make_article(id=2, source_name="src_b", category="research",
-                          url="https://example.com/2")
+        a2 = make_article(
+            id=2, source_name="src_b", category="research", url="https://example.com/2"
+        )
         session.add(user)
         session.add(a1)
         session.add(a2)
@@ -567,9 +599,12 @@ class TestLearningWithDB:
 
         # Create an old impression that was shown but not clicked
         imp = FeedImpression(
-            user_id=1, article_id=1,
+            user_id=1,
+            article_id=1,
             shown_at=utcnow() - timedelta(hours=48),
-            clicked=False, saved=False, processed=False,
+            clicked=False,
+            saved=False,
+            processed=False,
             position=0,
         )
         session.add(imp)
@@ -591,9 +626,12 @@ class TestLearningWithDB:
         session.commit()
 
         imp = FeedImpression(
-            user_id=1, article_id=1,
+            user_id=1,
+            article_id=1,
             shown_at=utcnow() - timedelta(hours=2),  # Recent (under 6h)
-            clicked=False, saved=False, processed=False,
+            clicked=False,
+            saved=False,
+            processed=False,
         )
         session.add(imp)
         session.commit()
@@ -605,6 +643,7 @@ class TestLearningWithDB:
 # ===========================================================================
 # 7. Embedding similarity
 # ===========================================================================
+
 
 class TestEmbeddingSimilarity:
     """Test cosine similarity and embedding factor mapping."""
@@ -664,12 +703,14 @@ class TestEmbeddingSimilarity:
 # 8. Metrics-driven adaptation
 # ===========================================================================
 
+
 class TestMetricsAdaptation:
     """Test adapt_from_metrics (nightly alpha/LR adjustment)."""
 
     def _seed_metrics(self, session, user_id, days_data):
         """Helper: seed ScoringMetric rows. days_data is list of (days_ago, ndcg, lift)."""
         from datetime import date
+
         today = date.today()
         for days_ago, ndcg, lift in days_data:
             m = ScoringMetric(
@@ -687,17 +728,24 @@ class TestMetricsAdaptation:
         user = make_user(id=1)
         session.add(user)
         profile = UserMLProfile(
-            user_id=1, total_clicks=30, total_saves=10, alpha=0.6,
+            user_id=1,
+            total_clicks=30,
+            total_saves=10,
+            alpha=0.6,
         )
         session.add(profile)
         session.commit()
 
         # 3 days of bad lift
-        self._seed_metrics(session, 1, [
-            (0, 0.5, 0.8),  # lift < 1.0
-            (1, 0.5, 0.7),
-            (2, 0.5, 0.9),
-        ])
+        self._seed_metrics(
+            session,
+            1,
+            [
+                (0, 0.5, 0.8),  # lift < 1.0
+                (1, 0.5, 0.7),
+                (2, 0.5, 0.9),
+            ],
+        )
 
         adapt_from_metrics(session, user_id=1)
         session.refresh(profile)
@@ -712,17 +760,24 @@ class TestMetricsAdaptation:
         user = make_user(id=1)
         session.add(user)
         profile = UserMLProfile(
-            user_id=1, total_clicks=60, total_saves=20, alpha=0.9,
+            user_id=1,
+            total_clicks=60,
+            total_saves=20,
+            alpha=0.9,
         )
         session.add(profile)
         session.commit()
 
         # 3 days of good lift
-        self._seed_metrics(session, 1, [
-            (0, 0.7, 1.5),
-            (1, 0.7, 1.3),
-            (2, 0.7, 1.2),
-        ])
+        self._seed_metrics(
+            session,
+            1,
+            [
+                (0, 0.7, 1.5),
+                (1, 0.7, 1.3),
+                (2, 0.7, 1.2),
+            ],
+        )
 
         adapt_from_metrics(session, user_id=1)
         session.refresh(profile)
@@ -736,21 +791,28 @@ class TestMetricsAdaptation:
         user = make_user(id=1)
         session.add(user)
         profile = UserMLProfile(
-            user_id=1, total_clicks=30, total_saves=10, alpha=0.6,
+            user_id=1,
+            total_clicks=30,
+            total_saves=10,
+            alpha=0.6,
         )
         session.add(profile)
         session.commit()
 
         # 7 days: recent nDCG much lower than prior
-        self._seed_metrics(session, 1, [
-            (0, 0.3, 1.1),  # recent (low nDCG)
-            (1, 0.3, 1.1),
-            (2, 0.3, 1.1),
-            (3, 0.7, 1.1),  # prior (high nDCG)
-            (4, 0.7, 1.1),
-            (5, 0.7, 1.1),
-            (6, 0.7, 1.1),
-        ])
+        self._seed_metrics(
+            session,
+            1,
+            [
+                (0, 0.3, 1.1),  # recent (low nDCG)
+                (1, 0.3, 1.1),
+                (2, 0.3, 1.1),
+                (3, 0.7, 1.1),  # prior (high nDCG)
+                (4, 0.7, 1.1),
+                (5, 0.7, 1.1),
+                (6, 0.7, 1.1),
+            ],
+        )
 
         adapt_from_metrics(session, user_id=1)
         session.refresh(profile)
@@ -765,14 +827,23 @@ class TestMetricsAdaptation:
         user = make_user(id=1)
         session.add(user)
         profile = UserMLProfile(
-            user_id=1, total_clicks=2, total_saves=1, alpha=0.97,
+            user_id=1,
+            total_clicks=2,
+            total_saves=1,
+            alpha=0.97,
         )
         session.add(profile)
         session.commit()
 
-        self._seed_metrics(session, 1, [
-            (0, 0.5, 0.5), (1, 0.5, 0.5), (2, 0.5, 0.5),
-        ])
+        self._seed_metrics(
+            session,
+            1,
+            [
+                (0, 0.5, 0.5),
+                (1, 0.5, 0.5),
+                (2, 0.5, 0.5),
+            ],
+        )
 
         adapt_from_metrics(session, user_id=1)
         session.refresh(profile)
@@ -785,13 +856,15 @@ class TestMetricsAdaptation:
 # 9. Cross-role scoring comparison
 # ===========================================================================
 
+
 class TestCrossRoleComparison:
     """Verify that the same article scores differently across user roles."""
 
     def test_research_article_ranking_across_roles(self):
         """Research article: student > enthusiast > industry."""
         article = make_article(
-            category="research", base_importance=7.0,
+            category="research",
+            base_importance=7.0,
             difficulty="intermediate",
         )
         student = make_user(role="student", level="intermediate")
@@ -807,7 +880,8 @@ class TestCrossRoleComparison:
     def test_product_article_ranking_across_roles(self):
         """Product article: industry > enthusiast > student."""
         article = make_article(
-            category="product", base_importance=7.0,
+            category="product",
+            base_importance=7.0,
             difficulty="intermediate",
         )
         student = make_user(role="student", level="intermediate")

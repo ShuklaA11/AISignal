@@ -5,11 +5,25 @@ producing structured summaries, categorizations, and importance rankings."""
 
 # Topics that articles can be tagged with
 ALL_TOPICS = [
-    "NLP", "Computer Vision", "Reinforcement Learning", "ML Theory",
-    "AI Safety", "Multimodal", "Robotics", "AI Agents",
-    "LLM APIs", "AI Infrastructure", "AI Startups", "Enterprise AI",
-    "AI Regulation", "Fundraising",
-    "Open Source Models", "AI Art", "AI Coding Tools", "AI Hardware", "Tutorials",
+    "NLP",
+    "Computer Vision",
+    "Reinforcement Learning",
+    "ML Theory",
+    "AI Safety",
+    "Multimodal",
+    "Robotics",
+    "AI Agents",
+    "LLM APIs",
+    "AI Infrastructure",
+    "AI Startups",
+    "Enterprise AI",
+    "AI Regulation",
+    "Fundraising",
+    "Open Source Models",
+    "AI Art",
+    "AI Coding Tools",
+    "AI Hardware",
+    "Tutorials",
     "General AI",
 ]
 

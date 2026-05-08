@@ -49,8 +49,7 @@ class BaseFetcher(ABC):
 
     @property
     @abstractmethod
-    def source_name(self) -> str:
-        ...
+    def source_name(self) -> str: ...
 
     @property
     def source_type(self) -> str:
@@ -66,9 +65,13 @@ class BaseFetcher(ABC):
                 return articles
             except Exception as e:
                 last_error = e
-                logger.warning(f"[{self.source_name}] Fetch attempt {attempt}/{MAX_FETCH_RETRIES} failed: {e}")
+                logger.warning(
+                    f"[{self.source_name}] Fetch attempt {attempt}/{MAX_FETCH_RETRIES} failed: {e}"
+                )
                 if attempt < MAX_FETCH_RETRIES:
-                    await asyncio.sleep(2 ** attempt)  # 2s, 4s backoff
+                    await asyncio.sleep(2**attempt)  # 2s, 4s backoff
 
-        logger.error(f"[{self.source_name}] All {MAX_FETCH_RETRIES} fetch attempts failed. Last error: {last_error}")
+        logger.error(
+            f"[{self.source_name}] All {MAX_FETCH_RETRIES} fetch attempts failed. Last error: {last_error}"
+        )
         return []

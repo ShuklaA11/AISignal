@@ -9,21 +9,19 @@ Covers:
 - Summary editing HTML sanitization
 """
 
-import json
 import re
-from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
-from src.storage.models import Article, ArticleSummary, User, utcnow
+from src.storage.models import Article, User
 from src.web.auth_utils import hash_password, verify_password
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def engine():
@@ -38,8 +36,13 @@ def session(engine):
         yield s
 
 
-def _make_user(session, email="test@test.com", password="securePass123!",
-               is_admin=False, role="enthusiast"):
+def _make_user(
+    session,
+    email="test@test.com",
+    password="securePass123!",
+    is_admin=False,
+    role="enthusiast",
+):
     hashed = hash_password(password)
     user = User(
         email=email,
@@ -79,6 +82,7 @@ def _make_article(session, id=1, title="Test Article"):
 # Password hashing
 # ---------------------------------------------------------------------------
 
+
 class TestPasswordHashing:
     def test_hash_and_verify(self):
         password = "MySecurePassword123!"
@@ -108,6 +112,7 @@ class TestPasswordHashing:
 # Auth route logic (unit tests, not HTTP tests)
 # ---------------------------------------------------------------------------
 
+
 class TestAuthValidation:
     """Test auth validation logic used in signup/login routes."""
 
@@ -131,6 +136,7 @@ class TestAuthValidation:
 # ---------------------------------------------------------------------------
 # API endpoint authorization
 # ---------------------------------------------------------------------------
+
 
 class TestAPIAuthorization:
     """Test authorization checks in API endpoints."""
@@ -174,6 +180,7 @@ class TestAPIAuthorization:
 # Summary HTML sanitization
 # ---------------------------------------------------------------------------
 
+
 class TestSummarySanitization:
     """Test that summary text has HTML stripped on input."""
 
@@ -186,7 +193,7 @@ class TestSummarySanitization:
         assert clean == 'alert("xss")Real summary here'
 
     def test_strips_nested_html(self):
-        dirty = '<div><p>Hello <b>world</b></p></div>'
+        dirty = "<div><p>Hello <b>world</b></p></div>"
         clean = re.sub(r"<[^>]+>", "", dirty).strip()
         assert clean == "Hello world"
 
@@ -196,7 +203,7 @@ class TestSummarySanitization:
         assert clean == text
 
     def test_strips_event_handler_attributes(self):
-        dirty = '<img src=x onerror=alert(1)>Summary'
+        dirty = "<img src=x onerror=alert(1)>Summary"
         clean = re.sub(r"<[^>]+>", "", dirty).strip()
         assert "onerror" not in clean
         assert clean == "Summary"
@@ -216,6 +223,7 @@ class TestSummarySanitization:
 # ---------------------------------------------------------------------------
 # Admin-only route protection
 # ---------------------------------------------------------------------------
+
 
 class TestAdminRoutes:
     def test_admin_check_logic(self, session):

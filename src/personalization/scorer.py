@@ -18,16 +18,25 @@ ALPHA_PURE_RULES_THRESHOLD = 0.99  # Above this, skip ML blending entirely
 # Role -> category affinity weights
 ROLE_CATEGORY_WEIGHTS = {
     "student": {
-        "research": 1.5, "open_source": 1.3, "opinion": 0.8,
-        "product": 0.7, "industry": 0.6,
+        "research": 1.5,
+        "open_source": 1.3,
+        "opinion": 0.8,
+        "product": 0.7,
+        "industry": 0.6,
     },
     "industry": {
-        "product": 1.5, "industry": 1.4, "open_source": 0.9,
-        "research": 0.7, "opinion": 0.8,
+        "product": 1.5,
+        "industry": 1.4,
+        "open_source": 0.9,
+        "research": 0.7,
+        "opinion": 0.8,
     },
     "enthusiast": {
-        "research": 1.1, "product": 1.1, "open_source": 1.2,
-        "industry": 0.9, "opinion": 1.0,
+        "research": 1.1,
+        "product": 1.1,
+        "open_source": 1.2,
+        "industry": 0.9,
+        "opinion": 1.0,
     },
 }
 
@@ -40,8 +49,15 @@ LEVEL_DIFFICULTY_WEIGHTS = {
 
 
 _RSS_PREFIXES = [
-    "techcrunch", "venturebeat", "mit_tech", "the_verge",
-    "openai", "anthropic", "deepmind", "huggingface_blog", "meta_ai",
+    "techcrunch",
+    "venturebeat",
+    "mit_tech",
+    "the_verge",
+    "openai",
+    "anthropic",
+    "deepmind",
+    "huggingface_blog",
+    "meta_ai",
 ]
 
 
@@ -150,7 +166,9 @@ def score_article_for_user(
 
 
 def score_article_for_user_ml(
-    article: Article, user: User, ml_profile: Optional[UserMLProfile] = None,
+    article: Article,
+    user: User,
+    ml_profile: Optional[UserMLProfile] = None,
     embedding_factor: float = 1.0,
 ) -> float:
     """Compute blended rule-based + ML-learned score.
@@ -173,7 +191,9 @@ def score_article_for_user_ml(
 
 
 def _compute_learned_score(
-    article: Article, profile: UserMLProfile, embedding_factor: float = 1.0,
+    article: Article,
+    profile: UserMLProfile,
+    embedding_factor: float = 1.0,
 ) -> float:
     """Score an article using only learned behavioral weights."""
     base = article.base_importance_score or DEFAULT_IMPORTANCE

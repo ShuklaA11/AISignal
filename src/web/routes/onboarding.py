@@ -13,19 +13,28 @@ VALID_ROLES = {"student", "industry", "enthusiast"}
 VALID_LEVELS = {"beginner", "intermediate", "advanced"}
 
 
-@router.get("/role", response_class=HTMLResponse,
-            summary="Role selection page",
-            description="Render the role selection step (student, industry, enthusiast).")
+@router.get(
+    "/role",
+    response_class=HTMLResponse,
+    summary="Role selection page",
+    description="Render the role selection step (student, industry, enthusiast).",
+)
 async def role_page(request: Request, auth: tuple = Depends(require_login)):
     user, session = auth
     session.close()
-    return templates.TemplateResponse("onboarding/role.html", {"request": request, "user": user})
+    return templates.TemplateResponse(
+        "onboarding/role.html", {"request": request, "user": user}
+    )
 
 
-@router.post("/role",
-             summary="Submit role selection",
-             description="Save the user's chosen role and proceed to level selection.")
-async def role_submit(request: Request, role: str = Form(...), auth: tuple = Depends(require_login)):
+@router.post(
+    "/role",
+    summary="Submit role selection",
+    description="Save the user's chosen role and proceed to level selection.",
+)
+async def role_submit(
+    request: Request, role: str = Form(...), auth: tuple = Depends(require_login)
+):
     user, session = auth
     try:
         if role not in VALID_ROLES:
@@ -38,19 +47,28 @@ async def role_submit(request: Request, role: str = Form(...), auth: tuple = Dep
         session.close()
 
 
-@router.get("/level", response_class=HTMLResponse,
-            summary="Level selection page",
-            description="Render the difficulty level selection step (beginner, intermediate, advanced).")
+@router.get(
+    "/level",
+    response_class=HTMLResponse,
+    summary="Level selection page",
+    description="Render the difficulty level selection step (beginner, intermediate, advanced).",
+)
 async def level_page(request: Request, auth: tuple = Depends(require_login)):
     user, session = auth
     session.close()
-    return templates.TemplateResponse("onboarding/level.html", {"request": request, "user": user})
+    return templates.TemplateResponse(
+        "onboarding/level.html", {"request": request, "user": user}
+    )
 
 
-@router.post("/level",
-             summary="Submit level selection",
-             description="Save the user's chosen difficulty level and proceed to topic selection.")
-async def level_submit(request: Request, level: str = Form(...), auth: tuple = Depends(require_login)):
+@router.post(
+    "/level",
+    summary="Submit level selection",
+    description="Save the user's chosen difficulty level and proceed to topic selection.",
+)
+async def level_submit(
+    request: Request, level: str = Form(...), auth: tuple = Depends(require_login)
+):
     user, session = auth
     try:
         if level not in VALID_LEVELS:
@@ -63,9 +81,12 @@ async def level_submit(request: Request, level: str = Form(...), auth: tuple = D
         session.close()
 
 
-@router.get("/topics", response_class=HTMLResponse,
-            summary="Topics selection page",
-            description="Render the topic selection step with role-specific defaults.")
+@router.get(
+    "/topics",
+    response_class=HTMLResponse,
+    summary="Topics selection page",
+    description="Render the topic selection step with role-specific defaults.",
+)
 async def topics_page(request: Request, auth: tuple = Depends(require_login)):
     user, session = auth
     session.close()
@@ -90,9 +111,11 @@ async def topics_page(request: Request, auth: tuple = Depends(require_login)):
     )
 
 
-@router.post("/topics",
-             summary="Submit topic selection",
-             description="Save the user's selected topics and proceed to source weighting.")
+@router.post(
+    "/topics",
+    summary="Submit topic selection",
+    description="Save the user's selected topics and proceed to source weighting.",
+)
 async def topics_submit(request: Request, auth: tuple = Depends(require_login)):
     user, session = auth
     try:
@@ -109,9 +132,12 @@ async def topics_submit(request: Request, auth: tuple = Depends(require_login)):
         session.close()
 
 
-@router.get("/sources", response_class=HTMLResponse,
-            summary="Source weighting page",
-            description="Render the source preference weighting step (0-10 per source).")
+@router.get(
+    "/sources",
+    response_class=HTMLResponse,
+    summary="Source weighting page",
+    description="Render the source preference weighting step (0-10 per source).",
+)
 async def sources_page(request: Request, auth: tuple = Depends(require_login)):
     user, session = auth
     session.close()
@@ -120,12 +146,36 @@ async def sources_page(request: Request, auth: tuple = Depends(require_login)):
     default_weights = role_defaults.get("source_weights", {})
 
     sources = [
-        {"name": "rss", "label": "News & Blogs", "description": "TechCrunch, VentureBeat, MIT Tech Review, etc."},
-        {"name": "arxiv", "label": "arXiv Papers", "description": "Latest research papers from cs.AI, cs.CL, cs.CV, cs.LG"},
-        {"name": "huggingface", "label": "HuggingFace Papers", "description": "Daily trending papers on HuggingFace"},
-        {"name": "reddit", "label": "Reddit", "description": "r/MachineLearning, r/artificial, r/LocalLLaMA"},
-        {"name": "twitter", "label": "Twitter/X", "description": "AI discussions and announcements"},
-        {"name": "github", "label": "GitHub Trending", "description": "Trending AI/ML repositories"},
+        {
+            "name": "rss",
+            "label": "News & Blogs",
+            "description": "TechCrunch, VentureBeat, MIT Tech Review, etc.",
+        },
+        {
+            "name": "arxiv",
+            "label": "arXiv Papers",
+            "description": "Latest research papers from cs.AI, cs.CL, cs.CV, cs.LG",
+        },
+        {
+            "name": "huggingface",
+            "label": "HuggingFace Papers",
+            "description": "Daily trending papers on HuggingFace",
+        },
+        {
+            "name": "reddit",
+            "label": "Reddit",
+            "description": "r/MachineLearning, r/artificial, r/LocalLLaMA",
+        },
+        {
+            "name": "twitter",
+            "label": "Twitter/X",
+            "description": "AI discussions and announcements",
+        },
+        {
+            "name": "github",
+            "label": "GitHub Trending",
+            "description": "Trending AI/ML repositories",
+        },
     ]
 
     return templates.TemplateResponse(
@@ -139,9 +189,11 @@ async def sources_page(request: Request, auth: tuple = Depends(require_login)):
     )
 
 
-@router.post("/sources",
-             summary="Submit source weights",
-             description="Save source preference weights and complete onboarding. Redirects to the feed.")
+@router.post(
+    "/sources",
+    summary="Submit source weights",
+    description="Save source preference weights and complete onboarding. Redirects to the feed.",
+)
 async def sources_submit(request: Request, auth: tuple = Depends(require_login)):
     user, session = auth
     try:

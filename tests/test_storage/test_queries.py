@@ -11,14 +11,18 @@ Covers:
 - Expired token cleanup
 """
 
-import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
 from src.storage.models import (
-    Article, FeedImpression, Token, User, UserMLProfile, utcnow,
+    Article,
+    FeedImpression,
+    Token,
+    User,
+    UserMLProfile,
+    utcnow,
 )
 from src.storage.queries import (
     _normalize_title,
@@ -37,10 +41,10 @@ from src.storage.queries import (
     update_impression_liked,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def engine():
@@ -91,6 +95,7 @@ def _make_article(session, id=1, url="https://example.com/1", title="Test Articl
 # 1. get_user_by_email / get_user_by_id
 # ===========================================================================
 
+
 class TestUserLookup:
     def test_get_user_by_email_found(self, session):
         user = _make_user(session, email="alice@test.com")
@@ -117,6 +122,7 @@ class TestUserLookup:
 # 2. article_exists
 # ===========================================================================
 
+
 class TestArticleExists:
     def test_existing_url(self, session):
         _make_article(session, url="https://example.com/exists")
@@ -129,6 +135,7 @@ class TestArticleExists:
 # ===========================================================================
 # 3. Title normalization and fingerprinting
 # ===========================================================================
+
 
 class TestTitleNormalization:
     def test_normalize_lowercases(self):
@@ -173,7 +180,9 @@ class TestTitleNormalization:
 
     def test_article_exists_by_title_no_match(self):
         existing = {"hello world this is a"}
-        assert article_exists_by_title("Something Completely Different", existing) is False
+        assert (
+            article_exists_by_title("Something Completely Different", existing) is False
+        )
 
     def test_article_exists_by_title_empty_title(self):
         existing = {"hello world"}
@@ -183,6 +192,7 @@ class TestTitleNormalization:
 # ===========================================================================
 # 4. toggle_saved_article
 # ===========================================================================
+
 
 class TestToggleSavedArticle:
     def test_save_unsave_resave(self, session):
@@ -206,6 +216,7 @@ class TestToggleSavedArticle:
 # 5. mark_article_read (idempotent)
 # ===========================================================================
 
+
 class TestMarkArticleRead:
     def test_mark_read_creates_record(self, session):
         user = _make_user(session)
@@ -213,8 +224,10 @@ class TestMarkArticleRead:
 
         mark_article_read(session, user.id, article.id)
 
-        from src.storage.models import ReadArticle
         from sqlmodel import select
+
+        from src.storage.models import ReadArticle
+
         stmt = select(ReadArticle).where(
             ReadArticle.user_id == user.id,
             ReadArticle.article_id == article.id,
@@ -228,8 +241,10 @@ class TestMarkArticleRead:
         mark_article_read(session, user.id, article.id)
         mark_article_read(session, user.id, article.id)
 
-        from src.storage.models import ReadArticle
         from sqlmodel import select
+
+        from src.storage.models import ReadArticle
+
         stmt = select(ReadArticle).where(
             ReadArticle.user_id == user.id,
             ReadArticle.article_id == article.id,
@@ -241,6 +256,7 @@ class TestMarkArticleRead:
 # ===========================================================================
 # 6. record_impressions
 # ===========================================================================
+
 
 class TestRecordImpressions:
     def test_bulk_insert(self, session):
@@ -256,6 +272,7 @@ class TestRecordImpressions:
         record_impressions(session, user.id, [1, 2, 3], feed_group="today")
 
         from sqlmodel import select
+
         stmt = select(FeedImpression).where(FeedImpression.user_id == user.id)
         impressions = list(session.exec(stmt).all())
         assert len(impressions) == 3
@@ -272,6 +289,7 @@ class TestRecordImpressions:
         record_impressions(session, user.id, [1], feed_group="today")
 
         from sqlmodel import select
+
         stmt = select(FeedImpression).where(FeedImpression.user_id == user.id)
         impressions = list(session.exec(stmt).all())
         assert len(impressions) == 1
@@ -299,6 +317,7 @@ class TestRecordImpressions:
         record_impressions(session, user.id, [1], feed_group="today")
 
         from sqlmodel import select
+
         stmt = select(FeedImpression).where(FeedImpression.user_id == user.id)
         impressions = list(session.exec(stmt).all())
         assert len(impressions) == 2
@@ -321,6 +340,7 @@ class TestRecordImpressions:
 # ===========================================================================
 # 7. Impression feedback: clicked / liked / disliked
 # ===========================================================================
+
 
 class TestImpressionFeedback:
     def _setup_impression(self, session):
@@ -380,6 +400,7 @@ class TestImpressionFeedback:
 # 8. get_or_create_ml_profile
 # ===========================================================================
 
+
 class TestGetOrCreateMLProfile:
     def test_creates_if_missing(self, session):
         user = _make_user(session)
@@ -403,6 +424,7 @@ class TestGetOrCreateMLProfile:
 # ===========================================================================
 # 9. cleanup_expired_tokens
 # ===========================================================================
+
 
 class TestCleanupExpiredTokens:
     def test_deletes_expired_tokens(self, session):
@@ -429,6 +451,7 @@ class TestCleanupExpiredTokens:
         assert removed == 1
 
         from sqlmodel import select
+
         remaining = list(session.exec(select(Token)).all())
         assert len(remaining) == 1
         assert remaining[0].token_hash == "valid_hash"

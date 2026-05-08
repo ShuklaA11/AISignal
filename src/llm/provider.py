@@ -33,9 +33,7 @@ class LLMProvider:
         self._provider = settings.llm.provider
         self._model_name = settings.llm.model
         self.model = f"{self._provider}/{self._model_name}"
-        self.fallbacks = [
-            f"{fb.provider}/{fb.model}" for fb in settings.llm.fallbacks
-        ]
+        self.fallbacks = [f"{fb.provider}/{fb.model}" for fb in settings.llm.fallbacks]
         self.temperature = settings.llm.temperature
         self.max_tokens = settings.llm.max_tokens_per_article
         self.api_key = settings.anthropic_api_key or settings.openai_api_key or None
@@ -79,7 +77,9 @@ class LLMProvider:
     # ------------------------------------------------------------------
     # Generation
     # ------------------------------------------------------------------
-    async def generate(self, prompt: str, system: str = "", max_tokens: int | None = None) -> str:
+    async def generate(
+        self, prompt: str, system: str = "", max_tokens: int | None = None
+    ) -> str:
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
@@ -109,7 +109,9 @@ class LLMProvider:
             )
             return response.choices[0].message.content or ""
         except asyncio.TimeoutError:
-            logger.error(f"LLM generation timed out after {DEFAULT_TIMEOUT}s for model {self.model}")
+            logger.error(
+                f"LLM generation timed out after {DEFAULT_TIMEOUT}s for model {self.model}"
+            )
             raise
         except Exception as e:
             logger.error(f"LLM generation failed for {self.model}: {e}")

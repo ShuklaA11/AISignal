@@ -7,24 +7,23 @@ Covers:
 - compute_daily_metrics() aggregation and upsert behavior
 """
 
-import math
-from datetime import date, datetime, timedelta
+from datetime import timedelta
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine
 
-from src.storage.models import FeedImpression, ScoringMetric, User, utcnow
 from src.metrics.calculator import (
     compute_ctr,
-    compute_save_rate,
-    compute_ndcg_at_k,
     compute_daily_metrics,
+    compute_ndcg_at_k,
+    compute_save_rate,
 )
-
+from src.storage.models import FeedImpression, User, utcnow
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def engine():
@@ -55,8 +54,16 @@ def _make_user(session, id=1):
     return user
 
 
-def _make_impression(session, user_id, article_id, clicked=False, saved=False,
-                     position=0, shown_at=None, feed_view="all"):
+def _make_impression(
+    session,
+    user_id,
+    article_id,
+    clicked=False,
+    saved=False,
+    position=0,
+    shown_at=None,
+    feed_view="all",
+):
     imp = FeedImpression(
         user_id=user_id,
         article_id=article_id,
@@ -75,6 +82,7 @@ def _make_impression(session, user_id, article_id, clicked=False, saved=False,
 # compute_ctr
 # ---------------------------------------------------------------------------
 
+
 class TestComputeCTR:
     def test_zero_impressions_returns_zero(self, session):
         user = _make_user(session)
@@ -85,8 +93,7 @@ class TestComputeCTR:
         user = _make_user(session)
         # 2 clicks out of 10 impressions = 0.2
         for i in range(10):
-            _make_impression(session, user.id, article_id=i + 1,
-                           clicked=(i < 2))
+            _make_impression(session, user.id, article_id=i + 1, clicked=(i < 2))
 
         result = compute_ctr(session, user.id)
         assert result == 0.2
@@ -114,18 +121,22 @@ class TestComputeCTR:
         two_days_ago = now - timedelta(days=2)
 
         # Old impression (should be excluded)
-        _make_impression(session, user.id, article_id=1, clicked=True,
-                        shown_at=two_days_ago)
+        _make_impression(
+            session, user.id, article_id=1, clicked=True, shown_at=two_days_ago
+        )
         # Recent impression (should be included)
-        _make_impression(session, user.id, article_id=2, clicked=False,
-                        shown_at=now)
+        _make_impression(session, user.id, article_id=2, clicked=False, shown_at=now)
 
-        result = compute_ctr(session, user.id, start=yesterday, end=now + timedelta(hours=1))
+        result = compute_ctr(
+            session, user.id, start=yesterday, end=now + timedelta(hours=1)
+        )
         assert result == 0.0  # Only the non-clicked one is in range
 
     def test_filters_by_feed_view(self, session):
         user = _make_user(session)
-        _make_impression(session, user.id, article_id=1, clicked=True, feed_view="for_you")
+        _make_impression(
+            session, user.id, article_id=1, clicked=True, feed_view="for_you"
+        )
         _make_impression(session, user.id, article_id=2, clicked=False, feed_view="all")
 
         result = compute_ctr(session, user.id, feed_view="for_you")
@@ -135,6 +146,7 @@ class TestComputeCTR:
 # ---------------------------------------------------------------------------
 # compute_save_rate
 # ---------------------------------------------------------------------------
+
 
 class TestComputeSaveRate:
     def test_zero_impressions_returns_zero(self, session):
@@ -146,8 +158,7 @@ class TestComputeSaveRate:
         user = _make_user(session)
         # 3 saves out of 10
         for i in range(10):
-            _make_impression(session, user.id, article_id=i + 1,
-                           saved=(i < 3))
+            _make_impression(session, user.id, article_id=i + 1, saved=(i < 3))
 
         result = compute_save_rate(session, user.id)
         assert result == 0.3
@@ -160,15 +171,19 @@ class TestComputeSaveRate:
         _make_impression(session, user.id, article_id=1, saved=True, shown_at=old)
         _make_impression(session, user.id, article_id=2, saved=False, shown_at=now)
 
-        result = compute_save_rate(session, user.id,
-                                  start=now - timedelta(hours=1),
-                                  end=now + timedelta(hours=1))
+        result = compute_save_rate(
+            session,
+            user.id,
+            start=now - timedelta(hours=1),
+            end=now + timedelta(hours=1),
+        )
         assert result == 0.0
 
 
 # ---------------------------------------------------------------------------
 # compute_ndcg_at_k
 # ---------------------------------------------------------------------------
+
 
 class TestComputeNDCG:
     def test_zero_impressions_returns_zero(self, session):
@@ -242,6 +257,7 @@ class TestComputeNDCG:
 # compute_daily_metrics (integration)
 # ---------------------------------------------------------------------------
 
+
 class TestComputeDailyMetrics:
     def test_creates_metric_for_day(self, session):
         user = _make_user(session)
@@ -250,9 +266,15 @@ class TestComputeDailyMetrics:
 
         # Create some impressions today
         for i in range(10):
-            _make_impression(session, user.id, article_id=i + 1,
-                           clicked=(i < 3), saved=(i < 1),
-                           position=i, shown_at=now)
+            _make_impression(
+                session,
+                user.id,
+                article_id=i + 1,
+                clicked=(i < 3),
+                saved=(i < 1),
+                position=i,
+                shown_at=now,
+            )
 
         metric = compute_daily_metrics(session, user.id, today)
 
@@ -270,15 +292,17 @@ class TestComputeDailyMetrics:
         now = utcnow()
 
         # Initial impressions
-        _make_impression(session, user.id, article_id=1, clicked=True,
-                        position=0, shown_at=now)
+        _make_impression(
+            session, user.id, article_id=1, clicked=True, position=0, shown_at=now
+        )
 
         metric1 = compute_daily_metrics(session, user.id, today)
         assert metric1.ctr == 1.0
 
         # Add more impressions
-        _make_impression(session, user.id, article_id=2, clicked=False,
-                        position=1, shown_at=now)
+        _make_impression(
+            session, user.id, article_id=2, clicked=False, position=1, shown_at=now
+        )
 
         metric2 = compute_daily_metrics(session, user.id, today)
         assert metric2.ctr == 0.5
@@ -304,15 +328,29 @@ class TestComputeDailyMetrics:
         now = utcnow()
 
         # 'for_you' feed: 2/2 clicked = 1.0 CTR
-        _make_impression(session, user.id, article_id=1, clicked=True,
-                        feed_view="for_you", shown_at=now)
-        _make_impression(session, user.id, article_id=2, clicked=True,
-                        feed_view="for_you", shown_at=now)
+        _make_impression(
+            session,
+            user.id,
+            article_id=1,
+            clicked=True,
+            feed_view="for_you",
+            shown_at=now,
+        )
+        _make_impression(
+            session,
+            user.id,
+            article_id=2,
+            clicked=True,
+            feed_view="for_you",
+            shown_at=now,
+        )
         # 'all' feed: 0/2 clicked = 0.0 CTR
-        _make_impression(session, user.id, article_id=3, clicked=False,
-                        feed_view="all", shown_at=now)
-        _make_impression(session, user.id, article_id=4, clicked=False,
-                        feed_view="all", shown_at=now)
+        _make_impression(
+            session, user.id, article_id=3, clicked=False, feed_view="all", shown_at=now
+        )
+        _make_impression(
+            session, user.id, article_id=4, clicked=False, feed_view="all", shown_at=now
+        )
 
         metric = compute_daily_metrics(session, user.id, today)
 
@@ -326,8 +364,9 @@ class TestComputeDailyMetrics:
         today = utcnow().date()
         now = utcnow()
 
-        _make_impression(session, user.id, article_id=1, clicked=True,
-                        feed_view="all", shown_at=now)
+        _make_impression(
+            session, user.id, article_id=1, clicked=True, feed_view="all", shown_at=now
+        )
 
         metric = compute_daily_metrics(session, user.id, today)
         assert metric.personalization_lift == 1.0  # Default neutral

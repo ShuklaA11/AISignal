@@ -6,19 +6,17 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from markupsafe import Markup
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse as StarletteRedirect
-
-from markupsafe import Markup
 
 from src.config import load_settings
 from src.logging_config import setup_logging
 from src.storage.database import init_db
 from src.web.auth_utils import _AdminRequired, _LoginRequired
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-
 from src.web.csrf import CSRFMiddleware, _get_or_create_token
 from src.web.rate_limit import limiter
 from src.web.template_engine import templates
@@ -41,6 +39,7 @@ async def lifespan(app: FastAPI):
 
     # Start scheduler
     from src.pipeline.scheduler import setup_scheduler
+
     scheduler = setup_scheduler(settings)
     scheduler.start()
 
@@ -49,7 +48,9 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 
-app = FastAPI(title="AISignal", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(
+    title="AISignal", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -76,7 +77,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "connect-src 'self' https://api.iconify.design"
         )
         if _https_only:
-            response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=63072000; includeSubDomains"
+            )
         return response
 
 
@@ -97,8 +100,10 @@ app.add_middleware(AbsoluteSessionTimeoutMiddleware)
 
 _https_only = not settings.base_url.startswith("http://")
 if not _https_only:
-    logger.warning("Session cookie https_only is False — cookies will be sent over plain HTTP. "
-                    "Set base_url to an https:// URL for production use.")
+    logger.warning(
+        "Session cookie https_only is False — cookies will be sent over plain HTTP. "
+        "Set base_url to an https:// URL for production use."
+    )
 
 app.add_middleware(
     SessionMiddleware,
@@ -126,17 +131,18 @@ def csrf_token(request: Request) -> str:
     """Return the raw CSRF token value (for HTMX headers)."""
     return _get_or_create_token(request)
 
+
 templates.env.globals["csrf_token"] = csrf_token
 templates.env.globals["csrf_input"] = csrf_input
 
 # Import and include routers
+from src.web.routes.analytics import router as analytics_router
 from src.web.routes.api import router as api_router
 from src.web.routes.auth import router as auth_router
+from src.web.routes.feed import router as feed_router
 from src.web.routes.onboarding import router as onboarding_router
 from src.web.routes.profile import router as profile_router
-from src.web.routes.feed import router as feed_router
 from src.web.routes.review import router as review_router
-from src.web.routes.analytics import router as analytics_router
 
 app.include_router(auth_router)
 app.include_router(onboarding_router)
@@ -152,6 +158,7 @@ async def login_required_handler(request: Request, exc: _LoginRequired):
     # HTMX API requests get 401; page requests get a redirect
     if request.url.path.startswith("/api/"):
         from fastapi.responses import HTMLResponse
+
         return HTMLResponse(content="", status_code=401)
     return StarletteRedirect(url="/login", status_code=302)
 
@@ -160,18 +167,24 @@ async def login_required_handler(request: Request, exc: _LoginRequired):
 async def admin_required_handler(request: Request, exc: _AdminRequired):
     if request.url.path.startswith("/api/"):
         from fastapi.responses import HTMLResponse
+
         return HTMLResponse(content="Forbidden", status_code=403)
     return StarletteRedirect(url="/feed", status_code=302)
 
 
-@app.get("/health",
-         summary="Health check",
-         description="Returns the application health status. Verifies database connectivity.")
+@app.get(
+    "/health",
+    summary="Health check",
+    description="Returns the application health status. Verifies database connectivity.",
+)
 async def health_check():
     """Health check endpoint for monitoring."""
     import logging as _logging
+
     from sqlalchemy import text
+
     from src.storage.database import session_scope
+
     try:
         with session_scope() as session:
             session.exec(text("SELECT 1"))
@@ -181,15 +194,21 @@ async def health_check():
         return {"status": "degraded"}
 
 
-@app.get("/", response_class=HTMLResponse,
-         summary="Landing page",
-         description="Render the landing page. Shows user info if logged in.")
+@app.get(
+    "/",
+    response_class=HTMLResponse,
+    summary="Landing page",
+    description="Render the landing page. Shows user info if logged in.",
+)
 async def root(request: Request):
     user_id = request.session.get("user_id")
     user = None
     if user_id:
         from src.storage.database import session_scope
         from src.storage.queries import get_user_by_id
+
         with session_scope() as session:
             user = get_user_by_id(session, user_id)
-    return templates.TemplateResponse("landing.html", {"request": request, "user": user})
+    return templates.TemplateResponse(
+        "landing.html", {"request": request, "user": user}
+    )

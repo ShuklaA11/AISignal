@@ -15,8 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 def save_user_model(
-    session: Session, user_id: int, model: UserTower,
-    loss: float, num_samples: int,
+    session: Session,
+    user_id: int,
+    model: UserTower,
+    loss: float,
+    num_samples: int,
 ) -> None:
     """Serialize and store a trained UserTower model."""
     buf = io.BytesIO()
@@ -24,8 +27,7 @@ def save_user_model(
     blob = buf.getvalue()
 
     existing = session.exec(
-        select(UserEmbeddingModel)
-        .where(UserEmbeddingModel.user_id == user_id)
+        select(UserEmbeddingModel).where(UserEmbeddingModel.user_id == user_id)
     ).first()
 
     if existing:
@@ -49,8 +51,7 @@ def save_user_model(
 def load_user_model(session: Session, user_id: int) -> UserTower | None:
     """Load a trained UserTower model from the database."""
     record = session.exec(
-        select(UserEmbeddingModel)
-        .where(UserEmbeddingModel.user_id == user_id)
+        select(UserEmbeddingModel).where(UserEmbeddingModel.user_id == user_id)
     ).first()
 
     if record is None:

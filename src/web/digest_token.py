@@ -25,12 +25,14 @@ def sign_digest_click(
 ) -> str:
     """Create a signed token encoding the click parameters."""
     s = _get_serializer(secret_key)
-    return s.dumps({
-        "u": user_id,
-        "a": article_id,
-        "d": digest_id,
-        "s": section,
-    })
+    return s.dumps(
+        {
+            "u": user_id,
+            "a": article_id,
+            "d": digest_id,
+            "s": section,
+        }
+    )
 
 
 def sign_unsubscribe(secret_key: str, user_id: int, email: str) -> str:

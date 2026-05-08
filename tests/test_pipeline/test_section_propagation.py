@@ -1,4 +1,5 @@
 """Tests that section/audience_tags/quality_weight flow from RawArticle to Article."""
+
 import pytest
 from sqlmodel import Session, SQLModel, create_engine, select
 
@@ -40,7 +41,9 @@ def test_store_articles_persists_section_metadata(session: Session) -> None:
     new_count = store_articles(session, raw_articles)
     assert new_count == 1
 
-    fetched = session.exec(select(Article).where(Article.url == "https://example.com/paper")).one()
+    fetched = session.exec(
+        select(Article).where(Article.url == "https://example.com/paper")
+    ).one()
     assert fetched.section == SECTION_RESEARCH
     assert fetched.audience_tags == ["researcher", "industry"]
     assert fetched.quality_weight == 1.7
@@ -59,7 +62,9 @@ def test_store_articles_handles_untagged_raw(session: Session) -> None:
     ]
     store_articles(session, raw_articles)
 
-    fetched = session.exec(select(Article).where(Article.url == "https://example.com/untagged")).one()
+    fetched = session.exec(
+        select(Article).where(Article.url == "https://example.com/untagged")
+    ).one()
     assert fetched.section is None
     assert fetched.audience_tags == []
     assert fetched.quality_weight == 1.0
@@ -68,10 +73,22 @@ def test_store_articles_handles_untagged_raw(session: Session) -> None:
 @pytest.mark.unit
 def test_store_articles_preserves_section_per_article(session: Session) -> None:
     raw_articles = [
-        RawArticle(url="u1", title="t1", source_name="s", source_type="api",
-                   section=SECTION_RESEARCH, quality_weight=2.0),
-        RawArticle(url="u2", title="t2", source_name="s", source_type="api",
-                   section=SECTION_BUILDER, quality_weight=0.8),
+        RawArticle(
+            url="u1",
+            title="t1",
+            source_name="s",
+            source_type="api",
+            section=SECTION_RESEARCH,
+            quality_weight=2.0,
+        ),
+        RawArticle(
+            url="u2",
+            title="t2",
+            source_name="s",
+            source_type="api",
+            section=SECTION_BUILDER,
+            quality_weight=0.8,
+        ),
     ]
     store_articles(session, raw_articles)
 

@@ -1,11 +1,11 @@
 """Evaluation metrics: CTR, nDCG, save rate, personalization lift."""
 
-import math
 import logging
+import math
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import case
-from sqlmodel import Session, select, func
+from sqlmodel import Session, func, select
 
 from src.storage.models import FeedImpression, ScoringMetric, utcnow
 
@@ -13,14 +13,15 @@ logger = logging.getLogger(__name__)
 
 
 def compute_ctr(
-    session: Session, user_id: int,
-    start: datetime | None = None, end: datetime | None = None,
+    session: Session,
+    user_id: int,
+    start: datetime | None = None,
+    end: datetime | None = None,
     feed_view: str = "",
 ) -> float:
     """Click-through rate = clicks / impressions."""
-    total_stmt = (
-        select(func.count(FeedImpression.id))
-        .where(FeedImpression.user_id == user_id)
+    total_stmt = select(func.count(FeedImpression.id)).where(
+        FeedImpression.user_id == user_id
     )
     clicked_stmt = (
         select(func.count(FeedImpression.id))
@@ -43,13 +44,14 @@ def compute_ctr(
 
 
 def compute_save_rate(
-    session: Session, user_id: int,
-    start: datetime | None = None, end: datetime | None = None,
+    session: Session,
+    user_id: int,
+    start: datetime | None = None,
+    end: datetime | None = None,
 ) -> float:
     """Save rate = saves / impressions."""
-    total_stmt = (
-        select(func.count(FeedImpression.id))
-        .where(FeedImpression.user_id == user_id)
+    total_stmt = select(func.count(FeedImpression.id)).where(
+        FeedImpression.user_id == user_id
     )
     saved_stmt = (
         select(func.count(FeedImpression.id))
@@ -69,8 +71,11 @@ def compute_save_rate(
 
 
 def compute_ndcg_at_k(
-    session: Session, user_id: int, k: int = 10,
-    start: datetime | None = None, end: datetime | None = None,
+    session: Session,
+    user_id: int,
+    k: int = 10,
+    start: datetime | None = None,
+    end: datetime | None = None,
 ) -> float:
     """nDCG@k — ranking quality. Relevance: saved=3, clicked=1, skipped=0.
 
@@ -114,7 +119,10 @@ def compute_ndcg_at_k(
 
         # IDCG: best possible ranking from this session's impressions
         all_rels = sorted(
-            [3.0 if imp.saved else (1.0 if imp.clicked else 0.0) for imp in session_imps],
+            [
+                3.0 if imp.saved else (1.0 if imp.clicked else 0.0)
+                for imp in session_imps
+            ],
             reverse=True,
         )
         idcg = sum(rel / math.log2(i + 2) for i, rel in enumerate(all_rels[:k]))
@@ -188,7 +196,9 @@ def compute_position_ctr(session: Session) -> dict[int, float]:
     return result
 
 
-def compute_daily_metrics(session: Session, user_id: int, target_date: date) -> ScoringMetric:
+def compute_daily_metrics(
+    session: Session, user_id: int, target_date: date
+) -> ScoringMetric:
     """Compute all metrics for a user for a specific date and store them."""
     start = datetime.combine(target_date, datetime.min.time())
     end = start + timedelta(days=1)
@@ -200,15 +210,20 @@ def compute_daily_metrics(session: Session, user_id: int, target_date: date) -> 
     # Personalization lift: for_you CTR / overall CTR
     # Compares personalized feed engagement against the baseline of all impressions.
     # Default to 1.0 (neutral) when there are no for_you impressions to compare.
-    fy_count = session.exec(
-        select(func.count(FeedImpression.id))
-        .where(FeedImpression.user_id == user_id)
-        .where(FeedImpression.shown_at >= start)
-        .where(FeedImpression.shown_at < end)
-        .where(FeedImpression.feed_view == "for_you")
-    ).one() or 0
+    fy_count = (
+        session.exec(
+            select(func.count(FeedImpression.id))
+            .where(FeedImpression.user_id == user_id)
+            .where(FeedImpression.shown_at >= start)
+            .where(FeedImpression.shown_at < end)
+            .where(FeedImpression.feed_view == "for_you")
+        ).one()
+        or 0
+    )
     if fy_count > 0 and ctr > 0:
-        for_you_ctr = compute_ctr(session, user_id, start=start, end=end, feed_view="for_you")
+        for_you_ctr = compute_ctr(
+            session, user_id, start=start, end=end, feed_view="for_you"
+        )
         lift = round(for_you_ctr / ctr, 4)
     else:
         lift = 1.0

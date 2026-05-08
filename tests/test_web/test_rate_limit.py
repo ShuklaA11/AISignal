@@ -3,14 +3,12 @@
 import time
 from unittest.mock import patch
 
-import pytest
-
 from src.web.rate_limit import RateLimiter
-
 
 # ---------------------------------------------------------------------------
 # is_rate_limited
 # ---------------------------------------------------------------------------
+
 
 def test_is_rate_limited_false_under_limit():
     """Returns False when attempts are below max_attempts."""
@@ -38,6 +36,7 @@ def test_is_rate_limited_false_for_unknown_key():
 # record_attempt
 # ---------------------------------------------------------------------------
 
+
 def test_record_attempt_increments_count():
     """Each record_attempt call adds one entry."""
     rl = RateLimiter(max_attempts=5, window_seconds=60)
@@ -61,6 +60,7 @@ def test_record_attempt_different_keys_are_independent():
 # remaining_seconds
 # ---------------------------------------------------------------------------
 
+
 def test_remaining_seconds_zero_when_no_attempts():
     """No attempts -> 0 remaining seconds."""
     rl = RateLimiter(max_attempts=5, window_seconds=60)
@@ -80,6 +80,7 @@ def test_remaining_seconds_returns_correct_wait():
 # ---------------------------------------------------------------------------
 # Window expiry: old attempts don't count
 # ---------------------------------------------------------------------------
+
 
 def test_old_attempts_expire_from_window():
     """Attempts older than the window are ignored."""
@@ -106,6 +107,7 @@ def test_remaining_seconds_after_expiry():
 # ---------------------------------------------------------------------------
 # _cleanup_all
 # ---------------------------------------------------------------------------
+
 
 def test_cleanup_all_removes_expired_entries():
     """_cleanup_all removes keys whose timestamps are all expired."""

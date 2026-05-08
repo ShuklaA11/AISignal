@@ -29,6 +29,7 @@ ROLE_SUMMARY_MAP = {
 def _validate_topics(raw_topics: list) -> list[str]:
     """Filter topics to allowed list, fallback to ['General AI'] if empty."""
     from src.llm.prompts import ALL_TOPICS
+
     allowed = set(ALL_TOPICS)
     valid = [t for t in raw_topics if t in allowed]
     return valid if valid else ["General AI"]
@@ -50,9 +51,9 @@ def _store_summaries(session: Session, article: Article, result: dict) -> int:
     Returns number of summaries created.
     """
     from sqlmodel import select
+
     existing = session.exec(
-        select(ArticleSummary.role)
-        .where(ArticleSummary.article_id == article.id)
+        select(ArticleSummary.role).where(ArticleSummary.article_id == article.id)
     ).all()
     existing_roles = set(existing)
     created = 0
@@ -63,7 +64,9 @@ def _store_summaries(session: Session, article: Article, result: dict) -> int:
             continue
         summary_text = result.get(key, "")
         if not summary_text:
-            logger.warning(f"Empty {role} summary for article {article.id}: {article.title[:50]}")
+            logger.warning(
+                f"Empty {role} summary for article {article.id}: {article.title[:50]}"
+            )
             continue
         summary = ArticleSummary(
             article_id=article.id,
@@ -77,7 +80,9 @@ def _store_summaries(session: Session, article: Article, result: dict) -> int:
     return created
 
 
-async def run_processing(settings: Settings | None = None, batch_size: int | None = None) -> int:
+async def run_processing(
+    settings: Settings | None = None, batch_size: int | None = None
+) -> int:
     """Process all raw articles with LLM. Returns count of processed articles."""
     if settings is None:
         settings = load_settings()
@@ -97,7 +102,9 @@ async def run_processing(settings: Settings | None = None, batch_size: int | Non
             logger.info("No raw articles to process")
             return 0
 
-        logger.info(f"Processing {len(raw_articles)} articles in batches of {batch_size}...")
+        logger.info(
+            f"Processing {len(raw_articles)} articles in batches of {batch_size}..."
+        )
         processed_count = 0
         consecutive_failures = 0
 
@@ -105,11 +112,15 @@ async def run_processing(settings: Settings | None = None, batch_size: int | Non
             # If 3 batches fail in a row, the backend is probably down — bail out
             if consecutive_failures >= 3:
                 remaining = len(raw_articles) - i
-                logger.error(f"3 consecutive batch failures — aborting. {remaining} articles remain as 'raw'.")
+                logger.error(
+                    f"3 consecutive batch failures — aborting. {remaining} articles remain as 'raw'."
+                )
                 break
 
             batch = raw_articles[i : i + batch_size]
-            logger.info(f"Processing batch {i // batch_size + 1} ({len(batch)} articles)...")
+            logger.info(
+                f"Processing batch {i // batch_size + 1} ({len(batch)} articles)..."
+            )
 
             results = None
             for attempt in range(1, MAX_BATCH_RETRIES + 1):
@@ -117,15 +128,19 @@ async def run_processing(settings: Settings | None = None, batch_size: int | Non
                     results = await process_articles_batch(llm, batch)
                     break
                 except Exception as e:
-                    logger.error(f"Batch {i // batch_size + 1} attempt {attempt}/{MAX_BATCH_RETRIES} failed: {e}")
+                    logger.error(
+                        f"Batch {i // batch_size + 1} attempt {attempt}/{MAX_BATCH_RETRIES} failed: {e}"
+                    )
                     if attempt < MAX_BATCH_RETRIES:
-                        await asyncio.sleep(2 ** attempt)  # Exponential backoff: 2s, 4s
+                        await asyncio.sleep(2**attempt)  # Exponential backoff: 2s, 4s
 
             if results is None:
                 consecutive_failures += 1
                 titles = [a.title[:50] for a in batch]
-                logger.error(f"Batch permanently failed after {MAX_BATCH_RETRIES} retries. "
-                             f"Articles remain as 'raw' for next run: {titles}")
+                logger.error(
+                    f"Batch permanently failed after {MAX_BATCH_RETRIES} retries. "
+                    f"Articles remain as 'raw' for next run: {titles}"
+                )
                 continue
             else:
                 consecutive_failures = 0
@@ -144,8 +159,10 @@ async def run_processing(settings: Settings | None = None, batch_size: int | Non
                 session.flush()  # Ensure article.id is set
                 summary_count = _store_summaries(session, article, result)
                 if summary_count == 0:
-                    logger.warning(f"No summaries created for article {article.id}: {article.title[:50]}. "
-                                   f"Reverting to 'raw' status.")
+                    logger.warning(
+                        f"No summaries created for article {article.id}: {article.title[:50]}. "
+                        f"Reverting to 'raw' status."
+                    )
                     article.status = "raw"
                     session.add(article)
                 else:

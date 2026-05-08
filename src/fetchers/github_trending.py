@@ -13,12 +13,39 @@ logger = logging.getLogger(__name__)
 
 GITHUB_TRENDING_URL = "https://github.com/trending"
 AI_KEYWORDS = {
-    "ai", "ml", "llm", "machine-learning", "deep-learning", "neural",
-    "transformer", "gpt", "diffusion", "nlp", "computer-vision",
-    "reinforcement-learning", "language model", "embedding", "vector database",
-    "rag", "inference", "fine-tun", "claude", "openai", "anthropic",
-    "agent", "agentic", "chatbot", "generative", "stable-diffusion",
-    "vision", "multimodal", "bert", "lora", "gguf", "ollama", "huggingface",
+    "ai",
+    "ml",
+    "llm",
+    "machine-learning",
+    "deep-learning",
+    "neural",
+    "transformer",
+    "gpt",
+    "diffusion",
+    "nlp",
+    "computer-vision",
+    "reinforcement-learning",
+    "language model",
+    "embedding",
+    "vector database",
+    "rag",
+    "inference",
+    "fine-tun",
+    "claude",
+    "openai",
+    "anthropic",
+    "agent",
+    "agentic",
+    "chatbot",
+    "generative",
+    "stable-diffusion",
+    "vision",
+    "multimodal",
+    "bert",
+    "lora",
+    "gguf",
+    "ollama",
+    "huggingface",
 }
 
 
@@ -41,7 +68,9 @@ class GitHubTrendingFetcher(BaseFetcher):
         soup = BeautifulSoup(resp.text, "html.parser")
         rows = soup.select("article.Box-row")
         if not rows:
-            logger.warning("[github] No trending rows found — GitHub may have changed their HTML structure")
+            logger.warning(
+                "[github] No trending rows found — GitHub may have changed their HTML structure"
+            )
 
         articles = []
         for row in rows:

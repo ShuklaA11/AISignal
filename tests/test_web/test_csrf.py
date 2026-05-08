@@ -13,10 +13,10 @@ from src.web.csrf import (
     _get_or_create_token,
 )
 
-
 # ---------------------------------------------------------------------------
 # _get_or_create_token
 # ---------------------------------------------------------------------------
+
 
 def test_get_or_create_token_creates_on_first_call():
     """First call stores a new token in the session and returns it."""
@@ -58,6 +58,7 @@ def test_get_or_create_token_preserves_existing():
 # CSRFMiddleware — safe methods bypass
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_safe_methods_bypass_csrf():
     """GET, HEAD, OPTIONS, TRACE should pass through without checking tokens."""
@@ -80,6 +81,7 @@ async def test_safe_methods_bypass_csrf():
 # ---------------------------------------------------------------------------
 # CSRFMiddleware — POST without token returns 403
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_post_without_session_token_returns_403():

@@ -36,6 +36,7 @@ def verify_password(password: str, hashed: str) -> bool:
 # FastAPI Dependencies (use with Depends())
 # ---------------------------------------------------------------------------
 
+
 def require_login(request: Request) -> tuple:
     """Dependency: returns (user, db_session). Raises _LoginRequired on failure.
 
@@ -93,9 +94,11 @@ def require_user_id(request: Request) -> int:
 
 class _LoginRequired(Exception):
     """Raised when login is required."""
+
     pass
 
 
 class _AdminRequired(Exception):
     """Raised when admin access is required."""
+
     pass

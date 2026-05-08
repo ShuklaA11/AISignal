@@ -8,10 +8,10 @@ Section weight profiles (per-role weighting across sections) live in
 config (see config.yaml.example) so deployments can tune defaults
 without code changes.
 """
+
 from __future__ import annotations
 
 from typing import Final
-
 
 SECTION_RESEARCH: Final[str] = "research"
 SECTION_RELEASES: Final[str] = "releases"

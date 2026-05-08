@@ -21,10 +21,10 @@ from src.pipeline.processor import (
 )
 from src.storage.models import Article, ArticleSummary, utcnow
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def engine():
@@ -77,6 +77,7 @@ def _make_llm_result(index=0):
 # _validate_topics
 # ---------------------------------------------------------------------------
 
+
 class TestValidateTopics:
     def test_valid_topics_pass_through(self):
         result = _validate_topics(["NLP", "AI Safety", "Robotics"])
@@ -104,6 +105,7 @@ class TestValidateTopics:
 # ---------------------------------------------------------------------------
 # _apply_result_to_article
 # ---------------------------------------------------------------------------
+
 
 class TestApplyResultToArticle:
     def test_applies_all_fields(self, session):
@@ -140,6 +142,7 @@ class TestApplyResultToArticle:
 # _store_summaries
 # ---------------------------------------------------------------------------
 
+
 class TestStoreSummaries:
     def test_stores_three_role_summaries(self, session):
         article = _make_article(session)
@@ -149,6 +152,7 @@ class TestStoreSummaries:
         assert count == 3
 
         from sqlmodel import select
+
         summaries = session.exec(
             select(ArticleSummary).where(ArticleSummary.article_id == article.id)
         ).all()
@@ -177,6 +181,7 @@ class TestStoreSummaries:
         assert count == 3
 
         from sqlmodel import select
+
         summaries = session.exec(
             select(ArticleSummary).where(ArticleSummary.article_id == article.id)
         ).all()
@@ -207,6 +212,7 @@ class TestStoreSummaries:
 # run_processing
 # ---------------------------------------------------------------------------
 
+
 class TestRunProcessing:
     @pytest.mark.asyncio
     async def test_processes_raw_articles(self, engine):
@@ -223,11 +229,14 @@ class TestRunProcessing:
         mock_settings.database_url = "sqlite://"
         mock_settings.llm.batch_size = 10
 
-        with patch("src.pipeline.processor.init_db") as mock_init_db, \
-             patch("src.pipeline.processor.LLMProvider") as mock_llm_cls, \
-             patch("src.pipeline.processor.session_scope") as mock_scope, \
-             patch("src.pipeline.processor.process_articles_batch", new_callable=AsyncMock) as mock_batch:
-
+        with (
+            patch("src.pipeline.processor.init_db") as mock_init_db,
+            patch("src.pipeline.processor.LLMProvider") as mock_llm_cls,
+            patch("src.pipeline.processor.session_scope") as mock_scope,
+            patch(
+                "src.pipeline.processor.process_articles_batch", new_callable=AsyncMock
+            ) as mock_batch,
+        ):
             mock_batch.return_value = llm_results
 
             # Wire session_scope to use our engine
@@ -247,6 +256,7 @@ class TestRunProcessing:
         # Verify articles are now "processed"
         with Session(engine) as session:
             from sqlmodel import select
+
             articles = session.exec(select(Article)).all()
             for a in articles:
                 assert a.status == "processed"
@@ -257,10 +267,11 @@ class TestRunProcessing:
         mock_settings = MagicMock()
         mock_settings.database_url = "sqlite://"
 
-        with patch("src.pipeline.processor.init_db"), \
-             patch("src.pipeline.processor.LLMProvider"), \
-             patch("src.pipeline.processor.session_scope") as mock_scope:
-
+        with (
+            patch("src.pipeline.processor.init_db"),
+            patch("src.pipeline.processor.LLMProvider"),
+            patch("src.pipeline.processor.session_scope") as mock_scope,
+        ):
             from contextlib import contextmanager
 
             @contextmanager
@@ -284,12 +295,15 @@ class TestRunProcessing:
         mock_settings.database_url = "sqlite://"
         mock_settings.llm.batch_size = 10
 
-        with patch("src.pipeline.processor.init_db"), \
-             patch("src.pipeline.processor.LLMProvider"), \
-             patch("src.pipeline.processor.session_scope") as mock_scope, \
-             patch("src.pipeline.processor.process_articles_batch", new_callable=AsyncMock) as mock_batch, \
-             patch("src.pipeline.processor.asyncio.sleep", new_callable=AsyncMock):
-
+        with (
+            patch("src.pipeline.processor.init_db"),
+            patch("src.pipeline.processor.LLMProvider"),
+            patch("src.pipeline.processor.session_scope") as mock_scope,
+            patch(
+                "src.pipeline.processor.process_articles_batch", new_callable=AsyncMock
+            ) as mock_batch,
+            patch("src.pipeline.processor.asyncio.sleep", new_callable=AsyncMock),
+        ):
             mock_batch.side_effect = Exception("LLM unavailable")
 
             from contextlib import contextmanager
@@ -308,5 +322,6 @@ class TestRunProcessing:
         # Verify article still raw
         with Session(engine) as session:
             from sqlmodel import select
+
             article = session.exec(select(Article)).first()
             assert article.status == "raw"

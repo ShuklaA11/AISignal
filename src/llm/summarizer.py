@@ -39,7 +39,9 @@ def build_batch_prompt(articles: list[Article]) -> str:
     )
 
 
-def parse_batch_response(raw_response: str, expected_count: int) -> list[dict[str, Any]]:
+def parse_batch_response(
+    raw_response: str, expected_count: int
+) -> list[dict[str, Any]]:
     """Parse the LLM JSON response, with fallback for partial results."""
     # Strip markdown code fences if present
     text = raw_response.strip()
@@ -68,20 +70,18 @@ def parse_batch_response(raw_response: str, expected_count: int) -> list[dict[st
     return results
 
 
-async def process_articles_batch(
-    llm, articles: list[Article]
-) -> list[dict[str, Any]]:
+async def process_articles_batch(llm, articles: list[Article]) -> list[dict[str, Any]]:
     """Send a batch of articles to the LLM for processing."""
     prompt = build_batch_prompt(articles)
     # Allow more tokens for batch responses
     max_tokens = 500 * len(articles)
-    raw_response = await llm.generate(prompt, system=SYSTEM_PROMPT, max_tokens=max_tokens)
+    raw_response = await llm.generate(
+        prompt, system=SYSTEM_PROMPT, max_tokens=max_tokens
+    )
     return parse_batch_response(raw_response, len(articles))
 
 
-async def adapt_summary_to_level(
-    llm, summary: str, level: str
-) -> str:
+async def adapt_summary_to_level(llm, summary: str, level: str) -> str:
     """Adapt an intermediate-level summary to beginner or advanced level."""
     if level == "intermediate":
         return summary

@@ -6,7 +6,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "TRACE"})
 CSRF_TOKEN_KEY = "_csrf_token"
 CSRF_FIELD_NAME = "csrf_token"
@@ -48,6 +47,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             content_type = request.headers.get("content-type", "")
             if "application/x-www-form-urlencoded" in content_type:
                 from urllib.parse import parse_qs
+
                 parsed = parse_qs(body.decode("utf-8"))
                 values = parsed.get(CSRF_FIELD_NAME, [])
                 submitted = values[0] if values else None

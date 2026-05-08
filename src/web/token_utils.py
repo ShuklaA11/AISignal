@@ -8,7 +8,10 @@ from typing import Optional
 from src.storage.database import session_scope
 from src.storage.models import utcnow
 from src.storage.queries import (
-    create_token, get_token_by_hash, invalidate_user_tokens, mark_token_used,
+    create_token,
+    get_token_by_hash,
+    invalidate_user_tokens,
+    mark_token_used,
 )
 
 EMAIL_VERIFICATION_EXPIRY = timedelta(hours=24)
@@ -52,8 +55,13 @@ def create_verification_token(user_id: int) -> str:
     with session_scope() as session:
         invalidate_user_tokens(session, user_id, "email_verification")
         raw = generate_token()
-        create_token(session, user_id, "email_verification", hash_token(raw),
-                     utcnow() + EMAIL_VERIFICATION_EXPIRY)
+        create_token(
+            session,
+            user_id,
+            "email_verification",
+            hash_token(raw),
+            utcnow() + EMAIL_VERIFICATION_EXPIRY,
+        )
         return raw
 
 
@@ -73,8 +81,13 @@ def create_reset_token(user_id: int) -> str:
     with session_scope() as session:
         invalidate_user_tokens(session, user_id, "password_reset")
         raw = generate_token()
-        create_token(session, user_id, "password_reset", hash_token(raw),
-                     utcnow() + PASSWORD_RESET_EXPIRY)
+        create_token(
+            session,
+            user_id,
+            "password_reset",
+            hash_token(raw),
+            utcnow() + PASSWORD_RESET_EXPIRY,
+        )
         return raw
 
 

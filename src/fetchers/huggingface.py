@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 
 import httpx
 from dateutil.parser import parse as parse_date
@@ -48,7 +47,9 @@ class HuggingFaceFetcher(BaseFetcher):
                     pass
 
             authors = paper_data.get("authors", [])
-            author_str = ", ".join(a.get("name", "") for a in authors[:3]) if authors else None
+            author_str = (
+                ", ".join(a.get("name", "") for a in authors[:3]) if authors else None
+            )
 
             articles.append(
                 RawArticle(

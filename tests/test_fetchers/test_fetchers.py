@@ -10,19 +10,18 @@ Covers:
 - AnthropicBlogFetcher RSC parsing and fallback scraping
 """
 
-import asyncio
 import json
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.fetchers.base import BaseFetcher, RawArticle, MAX_FETCH_RETRIES
-
+from src.fetchers.base import MAX_FETCH_RETRIES, BaseFetcher, RawArticle
 
 # ---------------------------------------------------------------------------
 # RawArticle
 # ---------------------------------------------------------------------------
+
 
 class TestRawArticle:
     def test_content_hash_deterministic(self):
@@ -54,6 +53,7 @@ class TestRawArticle:
 # ---------------------------------------------------------------------------
 # BaseFetcher.safe_fetch()
 # ---------------------------------------------------------------------------
+
 
 class _FailingFetcher(BaseFetcher):
     """A fetcher that fails N times then succeeds."""
@@ -130,9 +130,11 @@ class TestSafeFetch:
 # RSSFetcher
 # ---------------------------------------------------------------------------
 
+
 class TestRSSFetcher:
-    def _make_entry(self, title, summary="", link="https://example.com/1",
-                    tags=None, published=None):
+    def _make_entry(
+        self, title, summary="", link="https://example.com/1", tags=None, published=None
+    ):
         entry = MagicMock()
         entry.get = lambda k, d="": {
             "title": title,
@@ -148,7 +150,11 @@ class TestRSSFetcher:
         else:
             # Simulate missing date fields
             original_get = entry.get
-            entry.get = lambda k, d="": published if k in ("published", "updated", "created") else original_get(k, d)
+            entry.get = lambda k, d="": (
+                published
+                if k in ("published", "updated", "created")
+                else original_get(k, d)
+            )
 
         return entry
 
@@ -164,7 +170,9 @@ class TestRSSFetcher:
         from src.fetchers.rss import RSSFetcher
 
         entries = [
-            self._make_entry("New AI Model Breaks Records", "A large language model..."),
+            self._make_entry(
+                "New AI Model Breaks Records", "A large language model..."
+            ),
             self._make_entry("Stock Market Update", "The market rose 2% today"),
         ]
         feed = self._make_feed(entries)
@@ -196,7 +204,9 @@ class TestRSSFetcher:
         from src.fetchers.rss import RSSFetcher
 
         entries = [
-            self._make_entry("", "content", link="https://example.com/1"),  # empty title
+            self._make_entry(
+                "", "content", link="https://example.com/1"
+            ),  # empty title
             self._make_entry("Title", "content", link=""),  # empty link
         ]
         feed = self._make_feed(entries)
@@ -276,6 +286,7 @@ class TestRSSFetcher:
     @pytest.mark.asyncio
     async def test_source_type_is_rss(self):
         from src.fetchers.rss import RSSFetcher
+
         fetcher = RSSFetcher("test", "https://example.com")
         assert fetcher.source_type == "rss"
 
@@ -283,6 +294,7 @@ class TestRSSFetcher:
 # ---------------------------------------------------------------------------
 # ArxivFetcher
 # ---------------------------------------------------------------------------
+
 
 class TestArxivFetcher:
     @pytest.mark.asyncio
@@ -306,8 +318,10 @@ class TestArxivFetcher:
         mock_client = MagicMock()
         mock_client.results.return_value = [mock_result]
 
-        with patch("arxiv.Client", return_value=mock_client), \
-             patch("arxiv.Search") as mock_search:
+        with (
+            patch("arxiv.Client", return_value=mock_client),
+            patch("arxiv.Search") as mock_search,
+        ):
             fetcher = ArxivFetcher(categories=["cs.AI"], max_results=10)
             result = await fetcher.fetch()
 
@@ -325,8 +339,7 @@ class TestArxivFetcher:
         mock_client = MagicMock()
         mock_client.results.return_value = []
 
-        with patch("arxiv.Client", return_value=mock_client), \
-             patch("arxiv.Search"):
+        with patch("arxiv.Client", return_value=mock_client), patch("arxiv.Search"):
             fetcher = ArxivFetcher()
             result = await fetcher.fetch()
 
@@ -354,8 +367,7 @@ class TestArxivFetcher:
         mock_client = MagicMock()
         mock_client.results.return_value = [mock_result]
 
-        with patch("arxiv.Client", return_value=mock_client), \
-             patch("arxiv.Search"):
+        with patch("arxiv.Client", return_value=mock_client), patch("arxiv.Search"):
             fetcher = ArxivFetcher()
             result = await fetcher.fetch()
 
@@ -367,6 +379,7 @@ class TestArxivFetcher:
 # ---------------------------------------------------------------------------
 # GitHubTrendingFetcher
 # ---------------------------------------------------------------------------
+
 
 class TestGitHubTrendingFetcher:
     TRENDING_HTML = """
@@ -446,12 +459,14 @@ class TestGitHubTrendingFetcher:
     @pytest.mark.asyncio
     async def test_source_type_is_scrape(self):
         from src.fetchers.github_trending import GitHubTrendingFetcher
+
         assert GitHubTrendingFetcher().source_type == "scrape"
 
 
 # ---------------------------------------------------------------------------
 # HuggingFaceFetcher
 # ---------------------------------------------------------------------------
+
 
 class TestHuggingFaceFetcher:
     SAMPLE_RESPONSE = [
@@ -528,16 +543,18 @@ class TestHuggingFaceFetcher:
     async def test_handles_invalid_date(self):
         from src.fetchers.huggingface import HuggingFaceFetcher
 
-        bad_data = [{
-            "paper": {
-                "id": "123",
-                "title": "Test",
-                "summary": "Test",
-                "publishedAt": "not-a-date",
-                "authors": [],
-            },
-            "numUpvotes": 0,
-        }]
+        bad_data = [
+            {
+                "paper": {
+                    "id": "123",
+                    "title": "Test",
+                    "summary": "Test",
+                    "publishedAt": "not-a-date",
+                    "authors": [],
+                },
+                "numUpvotes": 0,
+            }
+        ]
 
         mock_resp = MagicMock()
         mock_resp.json.return_value = bad_data
@@ -560,6 +577,7 @@ class TestHuggingFaceFetcher:
 # AnthropicBlogFetcher
 # ---------------------------------------------------------------------------
 
+
 class TestAnthropicBlogFetcher:
     def _make_rsc_html(self, posts):
         """Build fake HTML with RSC payload containing posts."""
@@ -578,16 +596,26 @@ class TestAnthropicBlogFetcher:
         # JSON-encode the inner string
         encoded = json.dumps(inner)
         script = f"self.__next_f.push([1,{encoded}])"
-        return f'<html><head></head><body><script>{script}</script></body></html>'
+        return f"<html><head></head><body><script>{script}</script></body></html>"
 
     @pytest.mark.asyncio
     async def test_parses_rsc_payload(self):
         from src.fetchers.anthropic_blog import AnthropicBlogFetcher
 
-        html = self._make_rsc_html([
-            {"slug": "claude-4", "title": "Introducing Claude 4", "summary": "Our latest model."},
-            {"slug": "safety-update", "title": "Safety Update", "summary": "New safety features."},
-        ])
+        html = self._make_rsc_html(
+            [
+                {
+                    "slug": "claude-4",
+                    "title": "Introducing Claude 4",
+                    "summary": "Our latest model.",
+                },
+                {
+                    "slug": "safety-update",
+                    "title": "Safety Update",
+                    "summary": "New safety features.",
+                },
+            ]
+        )
 
         mock_resp = MagicMock()
         mock_resp.text = html
@@ -612,10 +640,12 @@ class TestAnthropicBlogFetcher:
     async def test_deduplicates_by_slug(self):
         from src.fetchers.anthropic_blog import AnthropicBlogFetcher
 
-        html = self._make_rsc_html([
-            {"slug": "same-post", "title": "Same Post"},
-            {"slug": "same-post", "title": "Same Post Duplicate"},
-        ])
+        html = self._make_rsc_html(
+            [
+                {"slug": "same-post", "title": "Same Post"},
+                {"slug": "same-post", "title": "Same Post Duplicate"},
+            ]
+        )
 
         mock_resp = MagicMock()
         mock_resp.text = html
@@ -669,7 +699,7 @@ class TestAnthropicBlogFetcher:
     async def test_handles_malformed_rsc_json(self):
         from src.fetchers.anthropic_blog import AnthropicBlogFetcher
 
-        html = '<html><script>self.__next_f.push([1,{not valid json}])</script></html>'
+        html = "<html><script>self.__next_f.push([1,{not valid json}])</script></html>"
 
         mock_resp = MagicMock()
         mock_resp.text = html

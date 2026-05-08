@@ -11,41 +11,41 @@ Covers:
 """
 
 import json
-import math
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import numpy as np
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
-from src.storage.models import (
-    Article, FeedImpression, User, UserMLProfile, utcnow,
+from src.embeddings.similarity import compute_embedding_factor
+from src.metrics.calculator import compute_position_ctr
+from src.personalization.learner import (
+    _ema,
+    decay_weights,
+    process_skips,
+    update_on_click,
+    update_on_dislike,
+    update_on_save,
 )
 from src.personalization.scorer import (
+    MAX_SCORE,
     _clamp_factor,
     _compute_learned_score,
     score_article_for_user,
     score_article_for_user_ml,
-    MAX_SCORE,
 )
-from src.personalization.learner import (
-    _apply_signal,
-    _ema,
-    _get_or_create_profile,
-    decay_weights,
-    process_skips,
-    update_on_click,
-    update_on_save,
-    update_on_like,
-    update_on_dislike,
+from src.storage.models import (
+    Article,
+    FeedImpression,
+    User,
+    UserMLProfile,
+    utcnow,
 )
-from src.embeddings.similarity import compute_embedding_factor
-from src.metrics.calculator import compute_position_ctr
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def engine():
@@ -61,8 +61,11 @@ def session(engine):
 
 
 def make_user(
-    role="enthusiast", level="intermediate", topics=None,
-    source_prefs=None, **kwargs,
+    role="enthusiast",
+    level="intermediate",
+    topics=None,
+    source_prefs=None,
+    **kwargs,
 ) -> User:
     return User(
         id=kwargs.get("id", 1),
@@ -75,8 +78,12 @@ def make_user(
 
 
 def make_article(
-    source_name="techcrunch", category="product", topics=None,
-    difficulty="intermediate", base_importance=7.0, **kwargs,
+    source_name="techcrunch",
+    category="product",
+    topics=None,
+    difficulty="intermediate",
+    base_importance=7.0,
+    **kwargs,
 ) -> Article:
     return Article(
         id=kwargs.get("id", 1),
@@ -95,9 +102,16 @@ def make_article(
 
 
 def make_ml_profile(
-    user_id=1, alpha=0.5, clicks=50, saves=10,
-    source_weights=None, category_weights=None, topic_weights=None,
-    difficulty_weights=None, entity_weights=None, signal_counts=None,
+    user_id=1,
+    alpha=0.5,
+    clicks=50,
+    saves=10,
+    source_weights=None,
+    category_weights=None,
+    topic_weights=None,
+    difficulty_weights=None,
+    entity_weights=None,
+    signal_counts=None,
 ) -> UserMLProfile:
     return UserMLProfile(
         user_id=user_id,
@@ -116,6 +130,7 @@ def make_ml_profile(
 # ===========================================================================
 # 1. Factor clamping stress tests
 # ===========================================================================
+
 
 class TestFactorClamping:
     """Verify clamping prevents score collapse and domination."""
@@ -176,8 +191,10 @@ class TestFactorClamping:
         # Student + product (0.7->0.7 clamped ok) + beginner-advanced (0.5) + low source
         user = make_user(role="student", level="beginner", source_prefs={"rss": 1})
         article = make_article(
-            source_name="techcrunch", category="industry",
-            difficulty="advanced", base_importance=5.0,
+            source_name="techcrunch",
+            category="industry",
+            difficulty="advanced",
+            base_importance=5.0,
         )
         score = score_article_for_user(article, user)
         # All factors at/near 0.5 floor: 5.0 * 0.5^4 = 0.3125 is worst without clamp
@@ -187,8 +204,10 @@ class TestFactorClamping:
     def test_learned_score_factors_also_clamped(self):
         """_compute_learned_score also clamps factors."""
         article = make_article(
-            source_name="arxiv", category="research",
-            topics=["NLP"], difficulty="advanced",
+            source_name="arxiv",
+            category="research",
+            topics=["NLP"],
+            difficulty="advanced",
             entities=["GPT"],
         )
         # Set extreme weights
@@ -208,6 +227,7 @@ class TestFactorClamping:
 # ===========================================================================
 # 2. Weighted topic matching
 # ===========================================================================
+
 
 class TestWeightedTopicMatching:
     """Verify learned topic weights influence rule-based scoring."""
@@ -270,6 +290,7 @@ class TestWeightedTopicMatching:
 # 3. Embedding range stress tests
 # ===========================================================================
 
+
 class TestEmbeddingRange:
     """Verify widened [0.3, 2.0] range gives embeddings real leverage."""
 
@@ -319,6 +340,7 @@ class TestEmbeddingRange:
 # 4. Skip signal strength
 # ===========================================================================
 
+
 class TestSkipSignalStrength:
     """Verify skip signals are stronger and faster."""
 
@@ -350,9 +372,12 @@ class TestSkipSignalStrength:
         session.commit()
 
         imp = FeedImpression(
-            user_id=1, article_id=1,
+            user_id=1,
+            article_id=1,
             shown_at=utcnow() - timedelta(hours=8),
-            clicked=False, saved=False, processed=False,
+            clicked=False,
+            saved=False,
+            processed=False,
             position=0,
         )
         session.add(imp)
@@ -370,9 +395,12 @@ class TestSkipSignalStrength:
         session.commit()
 
         imp = FeedImpression(
-            user_id=1, article_id=1,
+            user_id=1,
+            article_id=1,
             shown_at=utcnow() - timedelta(hours=4),
-            clicked=False, saved=False, processed=False,
+            clicked=False,
+            saved=False,
+            processed=False,
         )
         session.add(imp)
         session.commit()
@@ -394,22 +422,33 @@ class TestSkipSignalStrength:
 
         # Skip at position 0
         imp0 = FeedImpression(
-            user_id=1, article_id=1, shown_at=old_time,
-            clicked=False, saved=False, processed=False, position=0,
+            user_id=1,
+            article_id=1,
+            shown_at=old_time,
+            clicked=False,
+            saved=False,
+            processed=False,
+            position=0,
         )
         session.add(imp0)
         session.commit()
         process_skips(session, user_id=1)
         profile = session.exec(
-            __import__('sqlmodel', fromlist=['select']).select(UserMLProfile)
+            __import__("sqlmodel", fromlist=["select"])
+            .select(UserMLProfile)
             .where(UserMLProfile.user_id == 1)
         ).first()
         weight_pos0 = profile.source_weights.get("src_a", 1.0)
 
         # Skip at position 8
         imp8 = FeedImpression(
-            user_id=1, article_id=2, shown_at=old_time,
-            clicked=False, saved=False, processed=False, position=8,
+            user_id=1,
+            article_id=2,
+            shown_at=old_time,
+            clicked=False,
+            saved=False,
+            processed=False,
+            position=8,
         )
         session.add(imp8)
         session.commit()
@@ -424,6 +463,7 @@ class TestSkipSignalStrength:
 # ===========================================================================
 # 5. Position bias on explicit signals
 # ===========================================================================
+
 
 class TestPositionBiasOnSignals:
     """Verify position-aware IPS weighting on click/save/like/dislike."""
@@ -507,14 +547,18 @@ class TestPositionBiasOnSignals:
 # 6. Signal count tracking
 # ===========================================================================
 
+
 class TestSignalCountTracking:
     """Verify _apply_signal increments per-feature signal counts."""
 
     def test_click_increments_all_feature_counts(self, session):
         user = make_user(id=1)
         article = make_article(
-            id=1, source_name="arxiv", category="research",
-            topics=["NLP", "Transformers"], difficulty="advanced",
+            id=1,
+            source_name="arxiv",
+            category="research",
+            topics=["NLP", "Transformers"],
+            difficulty="advanced",
             entities=["GPT-4"],
         )
         session.add(user)
@@ -534,9 +578,16 @@ class TestSignalCountTracking:
 
     def test_multiple_signals_accumulate(self, session):
         user = make_user(id=1)
-        a1 = make_article(id=1, source_name="arxiv", category="research", topics=["NLP"])
-        a2 = make_article(id=2, source_name="arxiv", category="research", topics=["NLP"],
-                          url="http://a.com/2")
+        a1 = make_article(
+            id=1, source_name="arxiv", category="research", topics=["NLP"]
+        )
+        a2 = make_article(
+            id=2,
+            source_name="arxiv",
+            category="research",
+            topics=["NLP"],
+            url="http://a.com/2",
+        )
         session.add(user)
         session.add(a1)
         session.add(a2)
@@ -554,6 +605,7 @@ class TestSignalCountTracking:
 # ===========================================================================
 # 7. Confidence-aware weight decay
 # ===========================================================================
+
 
 class TestConfidenceAwareDecay:
     """Verify high-signal weights decay slower than low-signal ones."""
@@ -686,6 +738,7 @@ class TestConfidenceAwareDecay:
 # 8. Position CTR baselines
 # ===========================================================================
 
+
 class TestPositionCTR:
     """Verify compute_position_ctr aggregates correctly."""
 
@@ -703,22 +756,28 @@ class TestPositionCTR:
         # 15 impressions at position 0: 10 clicked
         for i in range(15):
             imp = FeedImpression(
-                user_id=1, article_id=i + 1, shown_at=now,
-                clicked=(i < 10), position=0,
+                user_id=1,
+                article_id=i + 1,
+                shown_at=now,
+                clicked=(i < 10),
+                position=0,
             )
             session.add(imp)
         # 12 impressions at position 5: 3 clicked
         for i in range(12):
             imp = FeedImpression(
-                user_id=1, article_id=100 + i, shown_at=now,
-                clicked=(i < 3), position=5,
+                user_id=1,
+                article_id=100 + i,
+                shown_at=now,
+                clicked=(i < 3),
+                position=5,
             )
             session.add(imp)
         session.commit()
 
         result = compute_position_ctr(session)
         assert abs(result[0] - 10 / 15) < 0.01  # ~0.667
-        assert abs(result[5] - 3 / 12) < 0.01   # 0.25
+        assert abs(result[5] - 3 / 12) < 0.01  # 0.25
 
     def test_low_count_uses_global_avg(self, session):
         """Position with < 10 impressions -> falls back to global average."""
@@ -730,15 +789,21 @@ class TestPositionCTR:
         # Position 0: 20 impressions, 10 clicked (CTR=0.5)
         for i in range(20):
             imp = FeedImpression(
-                user_id=1, article_id=i + 1, shown_at=now,
-                clicked=(i < 10), position=0,
+                user_id=1,
+                article_id=i + 1,
+                shown_at=now,
+                clicked=(i < 10),
+                position=0,
             )
             session.add(imp)
         # Position 9: only 5 impressions, 1 clicked
         for i in range(5):
             imp = FeedImpression(
-                user_id=1, article_id=200 + i, shown_at=now,
-                clicked=(i < 1), position=9,
+                user_id=1,
+                article_id=200 + i,
+                shown_at=now,
+                clicked=(i < 1),
+                position=9,
             )
             session.add(imp)
         session.commit()
@@ -755,6 +820,7 @@ class TestPositionCTR:
 # 9. End-to-end integration: all fixes working together
 # ===========================================================================
 
+
 class TestEndToEndIntegration:
     """Full pipeline: scoring -> signals -> decay -> re-scoring."""
 
@@ -765,12 +831,18 @@ class TestEndToEndIntegration:
 
         # Create articles
         liked_article = make_article(
-            id=1, source_name="arxiv", category="research",
-            topics=["NLP"], difficulty="intermediate",
+            id=1,
+            source_name="arxiv",
+            category="research",
+            topics=["NLP"],
+            difficulty="intermediate",
         )
         skipped_article = make_article(
-            id=2, source_name="techcrunch", category="product",
-            topics=["Blockchain"], difficulty="beginner",
+            id=2,
+            source_name="techcrunch",
+            category="product",
+            topics=["Blockchain"],
+            difficulty="beginner",
             url="http://a.com/2",
         )
         session.add(liked_article)
@@ -788,9 +860,13 @@ class TestEndToEndIntegration:
 
         # Add skip impression
         imp = FeedImpression(
-            user_id=1, article_id=2,
+            user_id=1,
+            article_id=2,
             shown_at=utcnow() - timedelta(hours=8),
-            clicked=False, saved=False, processed=False, position=0,
+            clicked=False,
+            saved=False,
+            processed=False,
+            position=0,
         )
         session.add(imp)
         session.commit()
@@ -801,15 +877,20 @@ class TestEndToEndIntegration:
 
         # Re-score with ML profile
         profile = session.exec(
-            __import__('sqlmodel', fromlist=['select']).select(UserMLProfile)
+            __import__("sqlmodel", fromlist=["select"])
+            .select(UserMLProfile)
             .where(UserMLProfile.user_id == 1)
         ).first()
 
         score_liked_after = score_article_for_user_ml(
-            liked_article, user, ml_profile=profile,
+            liked_article,
+            user,
+            ml_profile=profile,
         )
         score_skipped_after = score_article_for_user_ml(
-            skipped_article, user, ml_profile=profile,
+            skipped_article,
+            user,
+            ml_profile=profile,
         )
 
         # After learning, the liked article should be relatively stronger

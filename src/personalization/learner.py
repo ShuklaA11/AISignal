@@ -6,13 +6,18 @@ feature-level weights (source, category, topic, difficulty, entity).
 
 from __future__ import annotations
 
-import json
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlmodel import Session, select
 
-from src.storage.models import Article, FeedImpression, ScoringMetric, UserMLProfile, utcnow
+from src.storage.models import (
+    Article,
+    FeedImpression,
+    ScoringMetric,
+    UserMLProfile,
+    utcnow,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +26,10 @@ logger = logging.getLogger(__name__)
 # Public API
 # ---------------------------------------------------------------------------
 
-def update_on_click(session: Session, user_id: int, article_id: int, position: int | None = None) -> None:
+
+def update_on_click(
+    session: Session, user_id: int, article_id: int, position: int | None = None
+) -> None:
     """Update ML profile when user clicks/reads an article.
 
     Args:
@@ -49,7 +57,9 @@ def update_on_click(session: Session, user_id: int, article_id: int, position: i
     session.commit()
 
 
-def update_on_save(session: Session, user_id: int, article_id: int, position: int | None = None) -> None:
+def update_on_save(
+    session: Session, user_id: int, article_id: int, position: int | None = None
+) -> None:
     """Update ML profile when user saves an article.
 
     Args:
@@ -75,7 +85,9 @@ def update_on_save(session: Session, user_id: int, article_id: int, position: in
     session.commit()
 
 
-def update_on_like(session: Session, user_id: int, article_id: int, position: int | None = None) -> None:
+def update_on_like(
+    session: Session, user_id: int, article_id: int, position: int | None = None
+) -> None:
     """Update ML profile when user explicitly likes an article (strongest positive).
 
     Args:
@@ -101,7 +113,9 @@ def update_on_like(session: Session, user_id: int, article_id: int, position: in
     session.commit()
 
 
-def update_on_dislike(session: Session, user_id: int, article_id: int, position: int | None = None) -> None:
+def update_on_dislike(
+    session: Session, user_id: int, article_id: int, position: int | None = None
+) -> None:
     """Update ML profile when user explicitly dislikes an article (strong negative).
 
     Args:
@@ -152,7 +166,10 @@ def process_skips(session: Session, user_id: int) -> int:
 
     # Bulk-load all articles referenced by skipped impressions
     article_ids = list({imp.article_id for imp in skipped})
-    articles_by_id = {a.id: a for a in session.exec(select(Article).where(Article.id.in_(article_ids))).all()}
+    articles_by_id = {
+        a.id: a
+        for a in session.exec(select(Article).where(Article.id.in_(article_ids))).all()
+    }
 
     for imp in skipped:
         article = articles_by_id.get(imp.article_id)
@@ -177,6 +194,7 @@ def process_skips(session: Session, user_id: int) -> int:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _get_or_create_profile(session: Session, user_id: int) -> UserMLProfile:
     """Fetch existing ML profile or create a new one."""
@@ -205,6 +223,7 @@ def _apply_signal(profile: UserMLProfile, article: Article, signal: float) -> No
 
     # Source weight (normalize key so learned weights match rule-based scoring)
     from src.personalization.scorer import normalize_source_key
+
     source_w = profile.source_weights
     source_key = normalize_source_key(article.source_name)
     source_w[source_key] = _ema(source_w.get(source_key, 1.0), signal, lr)
@@ -301,12 +320,14 @@ def _update_alpha(profile: UserMLProfile) -> None:
     """
     total = profile.total_clicks + profile.total_saves
     import math
+
     profile.alpha = round(0.3 + 0.7 * math.exp(-total / 40), 4)
 
 
 # ---------------------------------------------------------------------------
 # Temporal decay (called nightly to prevent stale weights)
 # ---------------------------------------------------------------------------
+
 
 def decay_weights(session: Session, user_id: int) -> None:
     """Decay learned weights toward 1.0 with confidence-aware rate.
@@ -359,6 +380,7 @@ def decay_weights(session: Session, user_id: int) -> None:
 # Metrics-driven adaptation (called nightly after metrics computation)
 # ---------------------------------------------------------------------------
 
+
 def adapt_from_metrics(session: Session, user_id: int) -> None:
     """Adjust alpha and learning rate based on recent performance metrics.
 
@@ -375,12 +397,14 @@ def adapt_from_metrics(session: Session, user_id: int) -> None:
     today = datetime.now(timezone.utc).date()
     week_ago = today - timedelta(days=7)
 
-    recent_metrics = list(session.exec(
-        select(ScoringMetric)
-        .where(ScoringMetric.user_id == user_id)
-        .where(ScoringMetric.metric_date >= week_ago)
-        .order_by(ScoringMetric.metric_date.desc())
-    ).all())
+    recent_metrics = list(
+        session.exec(
+            select(ScoringMetric)
+            .where(ScoringMetric.user_id == user_id)
+            .where(ScoringMetric.metric_date >= week_ago)
+            .order_by(ScoringMetric.metric_date.desc())
+        ).all()
+    )
 
     # Filter out days with no impressions — they produce meaningless
     # lift=1.0 and ndcg=0.0 that would corrupt adaptation decisions.
@@ -396,6 +420,7 @@ def adapt_from_metrics(session: Session, user_id: int) -> None:
 
     # Compute the interaction-based alpha as baseline
     import math
+
     interaction_alpha = round(0.3 + 0.7 * math.exp(-total / 40), 4)
 
     if avg_lift < 1.0:

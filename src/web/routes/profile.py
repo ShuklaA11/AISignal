@@ -8,7 +8,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from src.config import load_settings
 from src.storage.database import session_scope
 from src.storage.queries import (
-    get_read_articles_for_user, get_saved_article_ids, get_saved_articles_for_user,
+    get_read_articles_for_user,
+    get_saved_article_ids,
+    get_saved_articles_for_user,
     get_user_by_email,
 )
 from src.web.auth_utils import hash_password, require_login, verify_password
@@ -25,9 +27,12 @@ VALID_ROLES = {"student", "industry", "enthusiast"}
 VALID_LEVELS = {"beginner", "intermediate", "advanced"}
 
 
-@router.get("/profile", response_class=HTMLResponse,
-            summary="User profile",
-            description="View and manage user preferences: role, level, topics, source weights, saved articles, and reading history.")
+@router.get(
+    "/profile",
+    response_class=HTMLResponse,
+    summary="User profile",
+    description="View and manage user preferences: role, level, topics, source weights, saved articles, and reading history.",
+)
 async def profile_page(request: Request, auth: tuple = Depends(require_login)):
     user, session = auth
     try:
@@ -58,9 +63,11 @@ async def profile_page(request: Request, auth: tuple = Depends(require_login)):
         session.close()
 
 
-@router.post("/profile",
-             summary="Update profile",
-             description="Update user preferences (role, level, name, topics, and source weights).")
+@router.post(
+    "/profile",
+    summary="Update profile",
+    description="Update user preferences (role, level, name, topics, and source weights).",
+)
 async def profile_update(request: Request, auth: tuple = Depends(require_login)):
     user, session = auth
     try:
@@ -103,9 +110,12 @@ async def profile_update(request: Request, auth: tuple = Depends(require_login))
 
 # ── Password change ───────────────────────────────────────────────────
 
-@router.post("/profile/password",
-             summary="Change password",
-             description="Change the logged-in user's password. Requires current password for verification.")
+
+@router.post(
+    "/profile/password",
+    summary="Change password",
+    description="Change the logged-in user's password. Requires current password for verification.",
+)
 async def change_password(
     request: Request,
     auth: tuple = Depends(require_login),
@@ -120,7 +130,12 @@ async def change_password(
             wait = profile_sensitive_limiter.remaining_seconds(client_ip)
             return templates.TemplateResponse(
                 "profile.html",
-                _profile_context(request, user, session, error=f"Too many attempts. Try again in {wait} seconds."),
+                _profile_context(
+                    request,
+                    user,
+                    session,
+                    error=f"Too many attempts. Try again in {wait} seconds.",
+                ),
                 status_code=429,
             )
         profile_sensitive_limiter.record_attempt(client_ip)
@@ -128,24 +143,40 @@ async def change_password(
         if not verify_password(current_password, user.password_hash):
             return templates.TemplateResponse(
                 "profile.html",
-                _profile_context(request, user, session, error="Current password is incorrect."),
+                _profile_context(
+                    request, user, session, error="Current password is incorrect."
+                ),
             )
 
         if new_password != confirm_password:
             return templates.TemplateResponse(
                 "profile.html",
-                _profile_context(request, user, session, error="New passwords do not match."),
+                _profile_context(
+                    request, user, session, error="New passwords do not match."
+                ),
             )
 
         if len(new_password) < 8:
             return templates.TemplateResponse(
                 "profile.html",
-                _profile_context(request, user, session, error="Password must be at least 8 characters."),
+                _profile_context(
+                    request,
+                    user,
+                    session,
+                    error="Password must be at least 8 characters.",
+                ),
             )
-        if not re.search(r"[A-Za-z]", new_password) or not re.search(r"[0-9]", new_password):
+        if not re.search(r"[A-Za-z]", new_password) or not re.search(
+            r"[0-9]", new_password
+        ):
             return templates.TemplateResponse(
                 "profile.html",
-                _profile_context(request, user, session, error="Password must contain at least one letter and one digit."),
+                _profile_context(
+                    request,
+                    user,
+                    session,
+                    error="Password must contain at least one letter and one digit.",
+                ),
             )
 
         user.password_hash = hash_password(new_password)
@@ -158,7 +189,9 @@ async def change_password(
 
         return templates.TemplateResponse(
             "profile.html",
-            _profile_context(request, user, session, success="Password changed successfully."),
+            _profile_context(
+                request, user, session, success="Password changed successfully."
+            ),
         )
     finally:
         session.close()
@@ -166,9 +199,12 @@ async def change_password(
 
 # ── Email change ──────────────────────────────────────────────────────
 
-@router.post("/profile/email",
-             summary="Change email",
-             description="Change the logged-in user's email. Requires password for verification. Sends verification to new email.")
+
+@router.post(
+    "/profile/email",
+    summary="Change email",
+    description="Change the logged-in user's email. Requires password for verification. Sends verification to new email.",
+)
 async def change_email(
     request: Request,
     auth: tuple = Depends(require_login),
@@ -182,7 +218,12 @@ async def change_email(
             wait = profile_sensitive_limiter.remaining_seconds(client_ip)
             return templates.TemplateResponse(
                 "profile.html",
-                _profile_context(request, user, session, error=f"Too many attempts. Try again in {wait} seconds."),
+                _profile_context(
+                    request,
+                    user,
+                    session,
+                    error=f"Too many attempts. Try again in {wait} seconds.",
+                ),
                 status_code=429,
             )
         profile_sensitive_limiter.record_attempt(client_ip)
@@ -190,27 +231,37 @@ async def change_email(
         if not verify_password(password, user.password_hash):
             return templates.TemplateResponse(
                 "profile.html",
-                _profile_context(request, user, session, error="Password is incorrect."),
+                _profile_context(
+                    request, user, session, error="Password is incorrect."
+                ),
             )
 
         new_email = new_email.strip().lower()
-        if not re.match(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$', new_email):
+        if not re.match(
+            r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$", new_email
+        ):
             return templates.TemplateResponse(
                 "profile.html",
-                _profile_context(request, user, session, error="Please enter a valid email address."),
+                _profile_context(
+                    request, user, session, error="Please enter a valid email address."
+                ),
             )
 
         if new_email == user.email:
             return templates.TemplateResponse(
                 "profile.html",
-                _profile_context(request, user, session, error="That is already your email address."),
+                _profile_context(
+                    request, user, session, error="That is already your email address."
+                ),
             )
 
         existing = get_user_by_email(session, new_email)
         if existing:
             return templates.TemplateResponse(
                 "profile.html",
-                _profile_context(request, user, session, error="That email is already in use."),
+                _profile_context(
+                    request, user, session, error="That email is already in use."
+                ),
             )
 
         user.email = new_email
@@ -223,17 +274,29 @@ async def change_email(
         try:
             from src.email_delivery.sender import EmailSender
             from src.web.token_utils import create_verification_token
+
             settings = load_settings()
             token = create_verification_token(user.id)
-            base_url = settings.base_url.rstrip("/") if settings.base_url else str(request.base_url).rstrip("/")
+            base_url = (
+                settings.base_url.rstrip("/")
+                if settings.base_url
+                else str(request.base_url).rstrip("/")
+            )
             sender = EmailSender(settings)
-            sender.send_verification_email(user, f"{base_url}/verify-email?token={token}")
+            sender.send_verification_email(
+                user, f"{base_url}/verify-email?token={token}"
+            )
         except Exception:
             logger.warning("Failed to send verification email after email change")
 
         return templates.TemplateResponse(
             "profile.html",
-            _profile_context(request, user, session, success="Email updated. Please check your new email for a verification link."),
+            _profile_context(
+                request,
+                user,
+                session,
+                success="Email updated. Please check your new email for a verification link.",
+            ),
         )
     finally:
         session.close()
@@ -241,9 +304,12 @@ async def change_email(
 
 # ── Account deletion ──────────────────────────────────────────────────
 
-@router.post("/profile/delete",
-             summary="Delete account",
-             description="Permanently delete the user's account and all associated data.")
+
+@router.post(
+    "/profile/delete",
+    summary="Delete account",
+    description="Permanently delete the user's account and all associated data.",
+)
 async def delete_account(
     request: Request,
     auth: tuple = Depends(require_login),
@@ -256,7 +322,12 @@ async def delete_account(
             wait = profile_sensitive_limiter.remaining_seconds(client_ip)
             return templates.TemplateResponse(
                 "profile.html",
-                _profile_context(request, user, session, error=f"Too many attempts. Try again in {wait} seconds."),
+                _profile_context(
+                    request,
+                    user,
+                    session,
+                    error=f"Too many attempts. Try again in {wait} seconds.",
+                ),
                 status_code=429,
             )
         profile_sensitive_limiter.record_attempt(client_ip)
@@ -264,7 +335,12 @@ async def delete_account(
         if not verify_password(password, user.password_hash):
             return templates.TemplateResponse(
                 "profile.html",
-                _profile_context(request, user, session, error="Password is incorrect. Account not deleted."),
+                _profile_context(
+                    request,
+                    user,
+                    session,
+                    error="Password is incorrect. Account not deleted.",
+                ),
             )
 
         user_id = user.id
@@ -272,11 +348,20 @@ async def delete_account(
         session.close()
 
     # Perform all deletes atomically in a single transaction
-    from sqlmodel import delete as sa_delete, select
+    from sqlmodel import delete as sa_delete
+    from sqlmodel import select
+
     from src.storage.models import (
-        DigestArticle, DigestClick, Digest, FeedImpression,
-        ReadArticle, SavedArticle, Token, User, UserMLProfile, UserEmbeddingModel,
+        Digest,
+        DigestArticle,
+        DigestClick,
+        FeedImpression,
+        ReadArticle,
+        SavedArticle,
         ScoringMetric,
+        Token,
+        User,
+        UserEmbeddingModel,
     )
 
     with session_scope() as session:
@@ -288,8 +373,12 @@ async def delete_account(
         # Delete digest articles via digests
         digest_ids = [d.id for d in user.digests]
         if digest_ids:
-            session.exec(sa_delete(DigestArticle).where(DigestArticle.digest_id.in_(digest_ids)))
-            session.exec(sa_delete(DigestClick).where(DigestClick.digest_id.in_(digest_ids)))
+            session.exec(
+                sa_delete(DigestArticle).where(DigestArticle.digest_id.in_(digest_ids))
+            )
+            session.exec(
+                sa_delete(DigestClick).where(DigestClick.digest_id.in_(digest_ids))
+            )
         session.flush()
 
         session.exec(sa_delete(Digest).where(Digest.user_id == user_id))
@@ -320,6 +409,7 @@ async def delete_account(
 
 
 # ── Helpers ───────────────────────────────────────────────────────────
+
 
 def _profile_context(request, user, session, error=None, success=None):
     """Build template context dict for profile page with optional messages."""

@@ -14,6 +14,7 @@ def utcnow() -> datetime:
 
 class User(SQLModel, table=True):
     """A registered user with personalization preferences and auth credentials."""
+
     __tablename__ = "users"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -55,6 +56,7 @@ class User(SQLModel, table=True):
 
 class Article(SQLModel, table=True):
     """A fetched article with metadata, LLM-assigned topics, and importance score."""
+
     __tablename__ = "articles"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -119,6 +121,7 @@ class Article(SQLModel, table=True):
 
 class ArticleSummary(SQLModel, table=True):
     """LLM-generated summary variant for a specific role and difficulty level."""
+
     __tablename__ = "article_summaries"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -132,6 +135,7 @@ class ArticleSummary(SQLModel, table=True):
 
 class ArticleEmbedding(SQLModel, table=True):
     """Stored embedding vector for an article, used for semantic similarity scoring."""
+
     __tablename__ = "article_embeddings"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -144,6 +148,7 @@ class ArticleEmbedding(SQLModel, table=True):
 
 class UserEmbeddingModel(SQLModel, table=True):
     """Stores per-user trained embedding model weights."""
+
     __tablename__ = "user_embedding_models"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -156,6 +161,7 @@ class UserEmbeddingModel(SQLModel, table=True):
 
 class DigestArticle(SQLModel, table=True):
     """Join table linking articles to digests with personalized score and display order."""
+
     __tablename__ = "digest_articles"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -171,6 +177,7 @@ class DigestArticle(SQLModel, table=True):
 
 class Digest(SQLModel, table=True):
     """A personalized email digest sent to a user on a specific date."""
+
     __tablename__ = "digests"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -188,6 +195,7 @@ class Digest(SQLModel, table=True):
 
 class SavedArticle(SQLModel, table=True):
     """Record of a user saving an article for later reading."""
+
     __tablename__ = "saved_articles"
     __table_args__ = (UniqueConstraint("user_id", "article_id"),)
 
@@ -202,6 +210,7 @@ class SavedArticle(SQLModel, table=True):
 
 class ReadArticle(SQLModel, table=True):
     """Record of a user reading (clicking through to) an article."""
+
     __tablename__ = "read_articles"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -215,6 +224,7 @@ class ReadArticle(SQLModel, table=True):
 
 class FeedImpression(SQLModel, table=True):
     """Tracks each time an article is shown to a user in the feed, with engagement signals."""
+
     __tablename__ = "feed_impressions"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -233,6 +243,7 @@ class FeedImpression(SQLModel, table=True):
 
 class UserMLProfile(SQLModel, table=True):
     """Learned per-user weights for personalized article scoring, updated via online learning."""
+
     __tablename__ = "user_ml_profiles"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -253,7 +264,9 @@ class UserMLProfile(SQLModel, table=True):
     total_clicks: int = Field(default=0)
     total_saves: int = Field(default=0)
     alpha: float = Field(default=1.0)  # 1.0 = 100% rule-based, 0.3 = 70% learned
-    learning_rate_override: Optional[float] = Field(default=None)  # Set by metrics adaptation; None = use interaction-based LR
+    learning_rate_override: Optional[float] = Field(
+        default=None
+    )  # Set by metrics adaptation; None = use interaction-based LR
     updated_at: datetime = Field(default_factory=utcnow)
 
     user: "User" = Relationship(back_populates="ml_profile")
@@ -309,6 +322,7 @@ class UserMLProfile(SQLModel, table=True):
 
 class FetchRun(SQLModel, table=True):
     """Per-source metrics from each fetch run."""
+
     __tablename__ = "fetch_runs"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -323,6 +337,7 @@ class FetchRun(SQLModel, table=True):
 
 class Source(SQLModel, table=True):
     """Configured data source with fetch schedule and connection settings."""
+
     __tablename__ = "sources"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -350,6 +365,7 @@ class Source(SQLModel, table=True):
 
 class ScoringMetric(SQLModel, table=True):
     """Daily computed evaluation metrics (CTR, nDCG, save rate) for a user."""
+
     __tablename__ = "scoring_metrics"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -367,6 +383,7 @@ class ScoringMetric(SQLModel, table=True):
 
 class DigestClick(SQLModel, table=True):
     """Tracks clicks on article links within email digests."""
+
     __tablename__ = "digest_clicks"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -379,6 +396,7 @@ class DigestClick(SQLModel, table=True):
 
 class Token(SQLModel, table=True):
     """One-time-use token for email verification and password reset."""
+
     __tablename__ = "tokens"
 
     id: Optional[int] = Field(default=None, primary_key=True)

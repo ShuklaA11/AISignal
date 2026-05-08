@@ -1,6 +1,5 @@
 """Tests for signed digest-click and unsubscribe tokens."""
 
-import pytest
 
 from src.web.digest_token import (
     sign_digest_click,
@@ -16,9 +15,12 @@ SECRET = "test-secret-key-for-tokens"
 # sign_digest_click / verify_digest_click round-trip
 # ---------------------------------------------------------------------------
 
+
 def test_digest_click_round_trip():
     """Sign then verify returns the original payload."""
-    token = sign_digest_click(SECRET, user_id=1, article_id=42, digest_id=7, section="research")
+    token = sign_digest_click(
+        SECRET, user_id=1, article_id=42, digest_id=7, section="research"
+    )
     result = verify_digest_click(SECRET, token)
 
     assert result is not None
@@ -41,6 +43,7 @@ def test_digest_click_default_section():
 # sign_unsubscribe / verify_unsubscribe round-trip
 # ---------------------------------------------------------------------------
 
+
 def test_unsubscribe_round_trip():
     """Sign then verify returns user_id and email."""
     token = sign_unsubscribe(SECRET, user_id=5, email="alice@example.com")
@@ -54,6 +57,7 @@ def test_unsubscribe_round_trip():
 # ---------------------------------------------------------------------------
 # Invalid / tampered tokens
 # ---------------------------------------------------------------------------
+
 
 def test_digest_click_tampered_token_returns_none():
     """A tampered token string should return None."""
@@ -85,6 +89,7 @@ def test_empty_token_returns_none():
 # Wrong secret returns None
 # ---------------------------------------------------------------------------
 
+
 def test_digest_click_wrong_secret_returns_none():
     """Verifying with a different secret key returns None."""
     token = sign_digest_click(SECRET, user_id=1, article_id=2, digest_id=3)
@@ -100,6 +105,7 @@ def test_unsubscribe_wrong_secret_returns_none():
 # ---------------------------------------------------------------------------
 # Cross-type tokens are rejected
 # ---------------------------------------------------------------------------
+
 
 def test_digest_click_token_rejected_by_unsubscribe_verify():
     """A digest-click token should fail unsubscribe verification (different salt)."""

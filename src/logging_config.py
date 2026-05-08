@@ -8,7 +8,6 @@ We patch dictConfig to prevent this and ensure our file handler survives.
 import logging
 import logging.config
 import logging.handlers
-from pathlib import Path
 
 from src.config import DATA_DIR
 
@@ -47,7 +46,8 @@ def setup_logging(level: str = "INFO", log_to_file: bool = True) -> None:
 
     # Ensure our file handler is on root (remove stale ones first)
     root.handlers = [
-        h for h in root.handlers
+        h
+        for h in root.handlers
         if not isinstance(h, logging.handlers.RotatingFileHandler)
     ]
 
@@ -56,7 +56,9 @@ def setup_logging(level: str = "INFO", log_to_file: bool = True) -> None:
         log_path = DATA_DIR / "newsletter.log"
         if _file_handler is None:
             _file_handler = logging.handlers.RotatingFileHandler(
-                log_path, maxBytes=10_000_000, backupCount=3,
+                log_path,
+                maxBytes=10_000_000,
+                backupCount=3,
             )
             _file_handler.setFormatter(formatter)
         root.addHandler(_file_handler)

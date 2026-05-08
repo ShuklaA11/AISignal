@@ -31,7 +31,10 @@ def compute_user_embedding(
     # Try learned model first
     try:
         from src.embeddings.user_model_store import load_user_model
-        from src.embeddings.user_tower import build_user_features, compute_learned_user_embedding
+        from src.embeddings.user_tower import (
+            build_user_features,
+            compute_learned_user_embedding,
+        )
 
         model = load_user_model(session, user_id)
         if model is not None:
@@ -41,7 +44,9 @@ def compute_user_embedding(
                 logger.debug(f"Using learned embedding for user {user_id}")
                 return learned_emb
     except Exception as e:
-        logger.warning(f"Learned embedding failed for user {user_id}, falling back: {e}")
+        logger.warning(
+            f"Learned embedding failed for user {user_id}, falling back: {e}"
+        )
 
     # Fallback: weighted average
     return _weighted_average_embedding(session, user_id, embedding_lookup)

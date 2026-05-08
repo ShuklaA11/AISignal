@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime
 
 from sqlmodel import Session
 
@@ -18,14 +17,21 @@ from src.fetchers.rss import RSSFetcher
 from src.fetchers.twitter import TwitterFetcher
 from src.storage.database import init_db, session_scope
 from src.storage.models import Article, FetchRun, utcnow
-from src.storage.queries import article_exists, article_exists_by_title, get_title_fingerprints, _normalize_title, _title_fingerprint
+from src.storage.queries import (
+    _title_fingerprint,
+    article_exists,
+    article_exists_by_title,
+    get_title_fingerprints,
+)
 
 logger = logging.getLogger(__name__)
 
 import re
 
 # Precompiled regex patterns for _clean_title
-_RE_LATEX_FORMAT = re.compile(r"\\(?:mathcal|mathrm|mathbb|mathbf|textbf|textit|text)\{([^}]*)\}")
+_RE_LATEX_FORMAT = re.compile(
+    r"\\(?:mathcal|mathrm|mathbb|mathbf|textbf|textit|text)\{([^}]*)\}"
+)
 _RE_LATEX_BOLD = re.compile(r"\\(?:boldsymbol|bm)\{([^}]*)\}")
 _RE_LATEX_CMD = re.compile(r"\\[a-zA-Z]+")
 _RE_SUPERSCRIPT = re.compile(r"\^(.)")
@@ -34,13 +40,31 @@ _RE_DOLLAR_BLOCK = re.compile(r"\$([^$]+)\$")
 _RE_WHITESPACE = re.compile(r"\s+")
 
 _LATEX_REPLACEMENTS = {
-    r"\star": "*", r"\ast": "*", r"\times": "\u00d7", r"\cdot": "\u00b7",
-    r"\leq": "\u2264", r"\geq": "\u2265", r"\neq": "\u2260", r"\approx": "\u2248",
-    r"\infty": "\u221e", r"\pi": "\u03c0", r"\alpha": "\u03b1", r"\beta": "\u03b2",
-    r"\gamma": "\u03b3", r"\delta": "\u03b4", r"\epsilon": "\u03b5", r"\lambda": "\u03bb",
-    r"\mu": "\u03bc", r"\sigma": "\u03c3", r"\theta": "\u03b8", r"\omega": "\u03c9",
-    r"\rightarrow": "\u2192", r"\leftarrow": "\u2190", r"\Rightarrow": "\u21d2",
-    r"\sim": "~", r"\ell": "\u2113",
+    r"\star": "*",
+    r"\ast": "*",
+    r"\times": "\u00d7",
+    r"\cdot": "\u00b7",
+    r"\leq": "\u2264",
+    r"\geq": "\u2265",
+    r"\neq": "\u2260",
+    r"\approx": "\u2248",
+    r"\infty": "\u221e",
+    r"\pi": "\u03c0",
+    r"\alpha": "\u03b1",
+    r"\beta": "\u03b2",
+    r"\gamma": "\u03b3",
+    r"\delta": "\u03b4",
+    r"\epsilon": "\u03b5",
+    r"\lambda": "\u03bb",
+    r"\mu": "\u03bc",
+    r"\sigma": "\u03c3",
+    r"\theta": "\u03b8",
+    r"\omega": "\u03c9",
+    r"\rightarrow": "\u2192",
+    r"\leftarrow": "\u2190",
+    r"\Rightarrow": "\u21d2",
+    r"\sim": "~",
+    r"\ell": "\u2113",
 }
 
 
@@ -129,7 +153,11 @@ def build_fetchers(settings: Settings) -> list[BaseFetcher]:
     return fetchers
 
 
-def store_articles(session: Session, raw_articles: list[RawArticle], existing_fps: set[str] | None = None) -> int:
+def store_articles(
+    session: Session,
+    raw_articles: list[RawArticle],
+    existing_fps: set[str] | None = None,
+) -> int:
     """Deduplicate and store raw articles. Returns count of new articles."""
     if existing_fps is None:
         existing_fps = get_title_fingerprints(session)
@@ -167,7 +195,9 @@ def store_articles(session: Session, raw_articles: list[RawArticle], existing_fp
 FETCHER_TIMEOUT = 120  # seconds per individual fetcher
 
 
-async def _timed_fetch(fetcher: BaseFetcher) -> tuple[BaseFetcher, list[RawArticle], int, str | None]:
+async def _timed_fetch(
+    fetcher: BaseFetcher,
+) -> tuple[BaseFetcher, list[RawArticle], int, str | None]:
     """Fetch from a single source, returning (fetcher, articles, duration_ms, error)."""
     t0 = time.monotonic()
     try:
@@ -205,9 +235,13 @@ async def run_ingestion(settings: Settings | None = None) -> int:
         all_articles.extend(articles)
         fetch_results.append((fetcher.source_name, count, duration_ms, error))
         if error:
-            logger.error(f"[{fetcher.source_name}] error after {duration_ms}ms: {error}")
+            logger.error(
+                f"[{fetcher.source_name}] error after {duration_ms}ms: {error}"
+            )
         elif count == 0:
-            logger.warning(f"[{fetcher.source_name}] returned 0 articles in {duration_ms}ms — check feed health")
+            logger.warning(
+                f"[{fetcher.source_name}] returned 0 articles in {duration_ms}ms — check feed health"
+            )
         else:
             logger.info(f"[{fetcher.source_name}] {count} articles in {duration_ms}ms")
 
@@ -244,8 +278,12 @@ async def run_ingestion(settings: Settings | None = None) -> int:
         # Count new articles per source before storing
         new_by_source: dict[str, int] = {}
         for raw in unique_articles:
-            if not article_exists(session, raw.url) and not article_exists_by_title(raw.title, existing_fps):
-                new_by_source[raw.source_name] = new_by_source.get(raw.source_name, 0) + 1
+            if not article_exists(session, raw.url) and not article_exists_by_title(
+                raw.title, existing_fps
+            ):
+                new_by_source[raw.source_name] = (
+                    new_by_source.get(raw.source_name, 0) + 1
+                )
 
         new_count = store_articles(session, unique_articles, existing_fps)
         logger.info(f"Stored {new_count} new articles")

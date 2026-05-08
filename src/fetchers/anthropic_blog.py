@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime
 
 import httpx
 from dateutil.parser import parse as parse_date
@@ -57,7 +56,9 @@ class AnthropicBlogFetcher(BaseFetcher):
 
         if not rsc_payload:
             # Strategy 2: Fall back to HTML link scraping as a last resort
-            logger.warning("[anthropic_blog] RSC payload not found, falling back to HTML link scraping")
+            logger.warning(
+                "[anthropic_blog] RSC payload not found, falling back to HTML link scraping"
+            )
             return self._fallback_html_scrape(html)
 
         # The RSC payload is: self.__next_f.push([1,"<json-escaped-string>"])
@@ -78,9 +79,7 @@ class AnthropicBlogFetcher(BaseFetcher):
         seen_slugs: set[str] = set()
 
         for part in parts[1:]:  # first chunk is before any post
-            slug_m = re.search(
-                r'"slug":\{"_type":"slug","current":"([^"]+)"\}', part
-            )
+            slug_m = re.search(r'"slug":\{"_type":"slug","current":"([^"]+)"\}', part)
             title_m = re.search(r'"title":"([^"]+)"', part)
             if not slug_m or not title_m:
                 continue
@@ -128,6 +127,7 @@ class AnthropicBlogFetcher(BaseFetcher):
     def _fallback_html_scrape(self, html: str) -> list[RawArticle]:
         """Fallback: extract article links from HTML when RSC parsing fails."""
         from bs4 import BeautifulSoup
+
         soup = BeautifulSoup(html, "html.parser")
         articles: list[RawArticle] = []
         seen: set[str] = set()
@@ -157,5 +157,7 @@ class AnthropicBlogFetcher(BaseFetcher):
                 )
             )
 
-        logger.info(f"[anthropic_blog] Fallback scrape found {len(articles)} article links")
+        logger.info(
+            f"[anthropic_blog] Fallback scrape found {len(articles)} article links"
+        )
         return articles

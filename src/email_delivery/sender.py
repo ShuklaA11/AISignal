@@ -15,7 +15,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from src.config import Settings
 from src.sections import ALL_SECTIONS, SECTION_LABELS
-from src.storage.models import Article, ArticleSummary, Digest, DigestArticle, User
+from src.storage.models import Digest, User
 from src.utils import mask_email as _mask_email
 from src.web.digest_token import sign_digest_click, sign_unsubscribe
 
@@ -91,13 +91,18 @@ class EmailSender:
             with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=10) as server:
                 server.starttls()
                 server.login(self.smtp_username, self.smtp_password)
-            return True, f"SMTP connection to {self.smtp_host}:{self.smtp_port} succeeded"
+            return (
+                True,
+                f"SMTP connection to {self.smtp_host}:{self.smtp_port} succeeded",
+            )
         except Exception as e:
             return False, f"SMTP connection failed: {e}"
 
     def send_verification_email(self, user, verification_url: str) -> bool:
         template = self.jinja_env.get_template("verify_email.html")
-        html_body = template.render(user_name=user.name, verification_url=verification_url)
+        html_body = template.render(
+            user_name=user.name, verification_url=verification_url
+        )
         return self.send(user.email, "Verify your email — The AI Signal", html_body)
 
     def send_password_reset_email(self, user, reset_url: str) -> bool:
@@ -114,7 +119,9 @@ class EmailSender:
         explore_articles: list[dict] | None = None,
     ) -> str:
         template = self.jinja_env.get_template("digest.html")
-        base_url = self.base_url.rstrip("/") if self.base_url else "http://localhost:8000"
+        base_url = (
+            self.base_url.rstrip("/") if self.base_url else "http://localhost:8000"
+        )
 
         # Deterministic daily remark: hash date + user_id for stable but unique pick
         date_str = digest.digest_date.strftime("%Y-%m-%d")
@@ -123,7 +130,11 @@ class EmailSender:
 
         def click_url(article_id: int, section: str = "main") -> str:
             token = sign_digest_click(
-                self.secret_key, user.id, article_id, digest.id, section,
+                self.secret_key,
+                user.id,
+                article_id,
+                digest.id,
+                section,
             )
             return f"{base_url}/api/digest/click?t={token}"
 
@@ -140,7 +151,11 @@ class EmailSender:
             items = [a for a in merged if a.get("section") == section_id]
             if items:
                 sectioned.append((section_id, SECTION_LABELS[section_id], items))
-        other_items = [a for a in merged if not a.get("section") or a["section"] not in ALL_SECTIONS]
+        other_items = [
+            a
+            for a in merged
+            if not a.get("section") or a["section"] not in ALL_SECTIONS
+        ]
         if other_items:
             sectioned.append(("other", "More", other_items))
 
@@ -158,7 +173,7 @@ class EmailSender:
 
     def send(self, to_email: str, subject: str, html_body: str) -> bool:
         """Send email with retry logic. Returns True on success."""
-        if '\n' in to_email or '\r' in to_email or ',' in to_email or ';' in to_email:
+        if "\n" in to_email or "\r" in to_email or "," in to_email or ";" in to_email:
             logger.error(f"Rejected suspicious to_email for {_mask_email(to_email)}")
             return False
 
@@ -174,11 +189,15 @@ class EmailSender:
                 ok = self._send_smtp(to_email, subject, html_body)
             if ok:
                 return True
-            logger.warning(f"Email send attempt {attempt}/{MAX_SEND_RETRIES} failed for {_mask_email(to_email)}")
+            logger.warning(
+                f"Email send attempt {attempt}/{MAX_SEND_RETRIES} failed for {_mask_email(to_email)}"
+            )
             if attempt < MAX_SEND_RETRIES:
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
 
-        logger.error(f"All {MAX_SEND_RETRIES} email send attempts failed for {_mask_email(to_email)}")
+        logger.error(
+            f"All {MAX_SEND_RETRIES} email send attempts failed for {_mask_email(to_email)}"
+        )
         logger.error("Falling back to console output for debugging")
         self._send_console(to_email, subject, html_body)
         return False
@@ -186,6 +205,7 @@ class EmailSender:
     def _send_console(self, to_email: str, subject: str, html_body: str) -> bool:
         """Log email to console (dev mode). Extracts URLs for easy clicking."""
         import re
+
         urls = re.findall(r'href="(http[^"]+)"', html_body)
         logger.info(f"[CONSOLE EMAIL] To: {_mask_email(to_email)} | Subject: {subject}")
         for url in urls:
@@ -195,13 +215,16 @@ class EmailSender:
     def _send_resend(self, to_email: str, subject: str, html_body: str) -> bool:
         try:
             import resend
+
             resend.api_key = self.resend_api_key
-            resend.Emails.send({
-                "from": self.from_address,
-                "to": to_email,
-                "subject": subject,
-                "html": html_body,
-            })
+            resend.Emails.send(
+                {
+                    "from": self.from_address,
+                    "to": to_email,
+                    "subject": subject,
+                    "html": html_body,
+                }
+            )
             logger.info(f"Email sent to {_mask_email(to_email)} via Resend")
             return True
         except Exception as e:

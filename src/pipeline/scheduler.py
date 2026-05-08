@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import traceback
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 from src.config import Settings
 
@@ -65,10 +65,21 @@ class SimpleScheduler:
                     exc = task.exception() if not task.cancelled() else None
                     reason = f"exception: {exc}" if exc else "cancelled or finished"
                     _log(f"watchdog: task {i} died ({reason}) — restarting", "warning")
-                    new_task = asyncio.get_event_loop().create_task(self._factories[i]())
+                    new_task = asyncio.get_event_loop().create_task(
+                        self._factories[i]()
+                    )
                     self._tasks[i] = new_task
 
-    def add_interval_job(self, coro_func, seconds: int, name: str, kwargs: dict | None = None, run_now: bool = False, initial_delay: int = 0, timeout: int | None = None):
+    def add_interval_job(
+        self,
+        coro_func,
+        seconds: int,
+        name: str,
+        kwargs: dict | None = None,
+        run_now: bool = False,
+        initial_delay: int = 0,
+        timeout: int | None = None,
+    ):
         """Schedule a coroutine to run at a fixed interval.
 
         If run_now=True, runs once immediately, then every `seconds`.
@@ -97,7 +108,15 @@ class SimpleScheduler:
 
         self._pending.append(_loop)
 
-    def add_daily_job(self, coro_func, hour: int, minute: int, name: str, kwargs: dict | None = None, timeout: int | None = 300):
+    def add_daily_job(
+        self,
+        coro_func,
+        hour: int,
+        minute: int,
+        name: str,
+        kwargs: dict | None = None,
+        timeout: int | None = 300,
+    ):
         """Schedule a coroutine to run daily at a specific local time."""
         scheduler = self
 
@@ -108,7 +127,9 @@ class SimpleScheduler:
                 if target <= now:
                     target += timedelta(days=1)
                 wait_seconds = (target - now).total_seconds()
-                _log(f"{name}: next run at {target.strftime('%H:%M')} local ({wait_seconds / 3600:.1f}h from now)")
+                _log(
+                    f"{name}: next run at {target.strftime('%H:%M')} local ({wait_seconds / 3600:.1f}h from now)"
+                )
                 try:
                     await asyncio.sleep(wait_seconds)
                 except asyncio.CancelledError:
@@ -123,7 +144,9 @@ class SimpleScheduler:
         self._pending.append(_loop)
 
 
-async def _safe_run(coro_func, name: str, kwargs: dict | None = None, timeout: int | None = None):
+async def _safe_run(
+    coro_func, name: str, kwargs: dict | None = None, timeout: int | None = None
+):
     """Run a job coroutine with full error protection and optional timeout."""
     try:
         _log(f"{name}: starting")
@@ -146,33 +169,79 @@ def setup_scheduler(settings: Settings) -> SimpleScheduler:
 
     # Heartbeat every 15 min
     scheduler.add_interval_job(
-        _heartbeat, seconds=900, name="heartbeat", run_now=True,
+        _heartbeat,
+        seconds=900,
+        name="heartbeat",
+        run_now=True,
         timeout=30,
     )
 
     # Fetch all sources every 2 hours, immediately on startup
     scheduler.add_interval_job(
-        _run_fetch, seconds=7200, name="fetch",
-        kwargs={"settings": settings}, run_now=True,
+        _run_fetch,
+        seconds=7200,
+        name="fetch",
+        kwargs={"settings": settings},
+        run_now=True,
         timeout=600,
     )
 
     # LLM processing every 30 min, staggered 5 min after startup
     scheduler.add_interval_job(
-        _run_process, seconds=1800, name="process",
-        kwargs={"settings": settings}, run_now=False, initial_delay=300,
+        _run_process,
+        seconds=1800,
+        name="process",
+        kwargs={"settings": settings},
+        run_now=False,
+        initial_delay=300,
         timeout=900,
     )
 
     # Nightly jobs
-    scheduler.add_daily_job(_run_skip_processing, hour=2, minute=0, name="skip_processing", kwargs={"settings": settings})
-    scheduler.add_daily_job(_run_weight_decay, hour=2, minute=30, name="weight_decay", kwargs={"settings": settings})
+    scheduler.add_daily_job(
+        _run_skip_processing,
+        hour=2,
+        minute=0,
+        name="skip_processing",
+        kwargs={"settings": settings},
+    )
+    scheduler.add_daily_job(
+        _run_weight_decay,
+        hour=2,
+        minute=30,
+        name="weight_decay",
+        kwargs={"settings": settings},
+    )
 
     # Midday skip processing (second daily pass to catch morning reading sessions faster)
-    scheduler.add_daily_job(_run_skip_processing, hour=14, minute=0, name="skip_processing_midday", kwargs={"settings": settings})
-    scheduler.add_daily_job(_run_metrics_computation, hour=3, minute=0, name="metrics", kwargs={"settings": settings})
-    scheduler.add_daily_job(_run_metrics_adaptation, hour=3, minute=15, name="metrics_adaptation", kwargs={"settings": settings})
-    scheduler.add_daily_job(_run_user_model_training, hour=3, minute=30, name="model_training", kwargs={"settings": settings})
+    scheduler.add_daily_job(
+        _run_skip_processing,
+        hour=14,
+        minute=0,
+        name="skip_processing_midday",
+        kwargs={"settings": settings},
+    )
+    scheduler.add_daily_job(
+        _run_metrics_computation,
+        hour=3,
+        minute=0,
+        name="metrics",
+        kwargs={"settings": settings},
+    )
+    scheduler.add_daily_job(
+        _run_metrics_adaptation,
+        hour=3,
+        minute=15,
+        name="metrics_adaptation",
+        kwargs={"settings": settings},
+    )
+    scheduler.add_daily_job(
+        _run_user_model_training,
+        hour=3,
+        minute=30,
+        name="model_training",
+        kwargs={"settings": settings},
+    )
     scheduler.add_daily_job(_run_token_cleanup, hour=4, minute=0, name="token_cleanup")
 
     # Daily digest send
@@ -198,18 +267,21 @@ async def _heartbeat():
 
 async def _run_fetch(settings: Settings):
     from src.pipeline.orchestrator import run_ingestion
+
     count = await run_ingestion(settings)
     _log(f"fetch: {count} new articles")
 
 
 async def _run_process(settings: Settings):
     from src.pipeline.processor import run_processing
+
     count = await run_processing(settings)
     _log(f"process: {count} articles processed")
 
     # Generate embeddings
     from src.embeddings.pipeline import run_embedding_generation
     from src.storage.database import session_scope
+
     with session_scope() as session:
         emb_count = await run_embedding_generation(session)
         _log(f"embeddings: {emb_count} generated")
@@ -219,6 +291,7 @@ async def _run_skip_processing(settings: Settings):
     from src.personalization.learner import process_skips
     from src.storage.database import session_scope
     from src.storage.queries import get_active_users
+
     with session_scope() as session:
         users = get_active_users(session)
         total = 0
@@ -234,6 +307,7 @@ async def _run_weight_decay(settings: Settings):
     from src.personalization.learner import decay_weights
     from src.storage.database import session_scope
     from src.storage.queries import get_active_users
+
     with session_scope() as session:
         users = get_active_users(session)
         for user in users:
@@ -248,6 +322,7 @@ async def _run_metrics_computation(settings: Settings):
     from src.metrics.calculator import compute_daily_metrics
     from src.storage.database import session_scope
     from src.storage.queries import get_active_users
+
     with session_scope() as session:
         users = get_active_users(session)
         yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
@@ -263,6 +338,7 @@ async def _run_metrics_adaptation(settings: Settings):
     from src.personalization.learner import adapt_from_metrics
     from src.storage.database import session_scope
     from src.storage.queries import get_active_users
+
     with session_scope() as session:
         users = get_active_users(session)
         for user in users:
@@ -274,13 +350,15 @@ async def _run_metrics_adaptation(settings: Settings):
 
 
 async def _run_user_model_training(settings: Settings):
+    import numpy as np
+    from sqlmodel import select
+
     from src.embeddings.user_model_store import save_user_model
     from src.embeddings.user_tower import train_user_tower
     from src.storage.database import session_scope
-    from src.storage.queries import get_active_users
-    from sqlmodel import select
     from src.storage.models import ArticleEmbedding
-    import numpy as np
+    from src.storage.queries import get_active_users
+
     with session_scope() as session:
         users = get_active_users(session)
         all_emb_rows = list(session.exec(select(ArticleEmbedding)).all())
@@ -292,7 +370,9 @@ async def _run_user_model_training(settings: Settings):
         for user in users:
             result = train_user_tower(session, user.id, embedding_lookup)
             if result is not None:
-                save_user_model(session, user.id, result.model, result.loss, result.num_samples)
+                save_user_model(
+                    session, user.id, result.model, result.loss, result.num_samples
+                )
                 trained += 1
         _log(f"model_training: trained {trained}/{len(users)} users")
 
@@ -300,6 +380,7 @@ async def _run_user_model_training(settings: Settings):
 async def _run_token_cleanup():
     from src.storage.database import session_scope
     from src.storage.queries import cleanup_expired_tokens
+
     with session_scope() as session:
         count = cleanup_expired_tokens(session)
         if count:
@@ -353,7 +434,9 @@ def _build_and_send_one(session, sender, user, manual: bool = False) -> str:
         .where(ArticleSummary.article_id.in_(all_article_ids))
         .where(ArticleSummary.role == user.role)
     )
-    summary_map = {s.article_id: s.summary_text for s in session.exec(summary_stmt).all()}
+    summary_map = {
+        s.article_id: s.summary_text for s in session.exec(summary_stmt).all()
+    }
 
     def _link_to_dict(link):
         article = link.article
@@ -372,7 +455,9 @@ def _build_and_send_one(session, sender, user, manual: bool = False) -> str:
     explore_data = [_link_to_dict(l) for l in explore_links]
 
     html = sender.render_digest(
-        digest, news_data, user,
+        digest,
+        news_data,
+        user,
         research_articles=research_data,
         explore_articles=explore_data,
     )
@@ -444,4 +529,9 @@ async def send_all_digests(settings: Settings) -> dict:
                 logger.error(f"Digest failed for user_id={user.id}: {e}")
                 failed += 1
 
-    return {"sent": sent, "failed": failed, "skipped": skipped, "total": sent + failed + skipped}
+    return {
+        "sent": sent,
+        "failed": failed,
+        "skipped": skipped,
+        "total": sent + failed + skipped,
+    }

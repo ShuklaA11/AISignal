@@ -7,34 +7,32 @@ Covers:
 - build_digest_for_user() end-to-end with DB
 """
 
-import json
-from datetime import date, datetime, timedelta
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from src.storage.models import (
-    Article, Digest, DigestArticle, FeedImpression, User, UserMLProfile, utcnow,
-)
 from src.personalization.digest_builder import (
-    _mmr_select,
     _interleave_sources,
+    _mmr_select,
     _thompson_explore,
     build_digest_for_user,
-    REDUNDANCY_THRESHOLD,
-    MMR_LAMBDA,
-    NEWS_ARTICLES,
-    RESEARCH_ARTICLES,
-    NEWS_ORDER_OFFSET,
-    RESEARCH_ORDER_OFFSET,
 )
-
+from src.storage.models import (
+    Article,
+    Digest,
+    DigestArticle,
+    FeedImpression,
+    User,
+    UserMLProfile,
+    utcnow,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def engine():
@@ -49,9 +47,16 @@ def session(engine):
         yield s
 
 
-def _make_article(session, id, title="Article", source="techcrunch",
-                  category="product", importance=5.0, status="processed",
-                  fetched_at=None):
+def _make_article(
+    session,
+    id,
+    title="Article",
+    source="techcrunch",
+    category="product",
+    importance=5.0,
+    status="processed",
+    fetched_at=None,
+):
     a = Article(
         id=id,
         url=f"https://example.com/{id}",
@@ -93,6 +98,7 @@ def _make_user(session, id=1, role="enthusiast", level="intermediate"):
 # _mmr_select
 # ---------------------------------------------------------------------------
 
+
 class TestMMRSelect:
     def test_returns_empty_for_empty_input(self):
         result = _mmr_select([], {}, max_articles=5)
@@ -103,9 +109,14 @@ class TestMMRSelect:
         articles = []
         for i in range(5):
             a = Article(
-                id=i, url=f"https://example.com/{i}", content_hash=f"h{i}",
-                title=f"Art {i}", source_name="test", source_type="rss",
-                topics_json="[]", key_entities_json="[]",
+                id=i,
+                url=f"https://example.com/{i}",
+                content_hash=f"h{i}",
+                title=f"Art {i}",
+                source_name="test",
+                source_type="rss",
+                topics_json="[]",
+                key_entities_json="[]",
             )
             articles.append(a)
 
@@ -122,9 +133,14 @@ class TestMMRSelect:
         articles = []
         for i in range(3):
             a = Article(
-                id=i, url=f"https://example.com/{i}", content_hash=f"h{i}",
-                title=f"Art {i}", source_name="test", source_type="rss",
-                topics_json="[]", key_entities_json="[]",
+                id=i,
+                url=f"https://example.com/{i}",
+                content_hash=f"h{i}",
+                title=f"Art {i}",
+                source_name="test",
+                source_type="rss",
+                topics_json="[]",
+                key_entities_json="[]",
             )
             articles.append(a)
 
@@ -152,9 +168,14 @@ class TestMMRSelect:
         articles = []
         for i in range(10):
             a = Article(
-                id=i, url=f"https://example.com/{i}", content_hash=f"h{i}",
-                title=f"Art {i}", source_name="test", source_type="rss",
-                topics_json="[]", key_entities_json="[]",
+                id=i,
+                url=f"https://example.com/{i}",
+                content_hash=f"h{i}",
+                title=f"Art {i}",
+                source_name="test",
+                source_type="rss",
+                topics_json="[]",
+                key_entities_json="[]",
             )
             articles.append(a)
 
@@ -167,9 +188,14 @@ class TestMMRSelect:
         articles = []
         for i in range(3):
             a = Article(
-                id=i, url=f"https://example.com/{i}", content_hash=f"h{i}",
-                title=f"Art {i}", source_name="test", source_type="rss",
-                topics_json="[]", key_entities_json="[]",
+                id=i,
+                url=f"https://example.com/{i}",
+                content_hash=f"h{i}",
+                title=f"Art {i}",
+                source_name="test",
+                source_type="rss",
+                topics_json="[]",
+                key_entities_json="[]",
             )
             articles.append(a)
 
@@ -195,15 +221,21 @@ class TestMMRSelect:
 # _interleave_sources
 # ---------------------------------------------------------------------------
 
+
 class TestInterleaveSources:
     def _make_scored(self, sources):
         """Create list of (Article, score) from source name list."""
         result = []
         for i, src in enumerate(sources):
             a = Article(
-                id=i, url=f"https://example.com/{i}", content_hash=f"h{i}",
-                title=f"Art {i}", source_name=src, source_type="rss",
-                topics_json="[]", key_entities_json="[]",
+                id=i,
+                url=f"https://example.com/{i}",
+                content_hash=f"h{i}",
+                title=f"Art {i}",
+                source_name=src,
+                source_type="rss",
+                topics_json="[]",
+                key_entities_json="[]",
             )
             result.append((a, 10.0 - i))
         return result
@@ -250,6 +282,7 @@ class TestInterleaveSources:
 # _thompson_explore
 # ---------------------------------------------------------------------------
 
+
 class TestThompsonExplore:
     def test_excludes_already_selected_articles(self, session):
         articles = []
@@ -288,8 +321,10 @@ class TestThompsonExplore:
         # Give article 1 lots of engagement
         for _ in range(20):
             imp = FeedImpression(
-                user_id=user.id, article_id=1,
-                clicked=True, saved=True,
+                user_id=user.id,
+                article_id=1,
+                clicked=True,
+                saved=True,
             )
             session.add(imp)
         # Give article 2 no engagement
@@ -309,6 +344,7 @@ class TestThompsonExplore:
 # build_digest_for_user (integration)
 # ---------------------------------------------------------------------------
 
+
 class TestBuildDigestForUser:
     def test_creates_digest_with_articles(self, session):
         user = _make_user(session)
@@ -327,13 +363,28 @@ class TestBuildDigestForUser:
 
         # Create articles — mix of news and research
         for i in range(6):
-            _make_article(session, id=i + 1, source="techcrunch" if i < 3 else "arxiv",
-                         category="product" if i < 3 else "research",
-                         importance=8.0 - i)
+            _make_article(
+                session,
+                id=i + 1,
+                source="techcrunch" if i < 3 else "arxiv",
+                category="product" if i < 3 else "research",
+                importance=8.0 - i,
+            )
 
-        with patch("src.personalization.digest_builder.get_article_embeddings", return_value={}), \
-             patch("src.personalization.digest_builder.compute_user_embedding", return_value=None), \
-             patch("src.personalization.digest_builder.get_ml_profile", return_value=profile):
+        with (
+            patch(
+                "src.personalization.digest_builder.get_article_embeddings",
+                return_value={},
+            ),
+            patch(
+                "src.personalization.digest_builder.compute_user_embedding",
+                return_value=None,
+            ),
+            patch(
+                "src.personalization.digest_builder.get_ml_profile",
+                return_value=profile,
+            ),
+        ):
             digest = build_digest_for_user(session, user, manual=True)
 
         assert digest is not None
@@ -392,10 +443,23 @@ class TestBuildDigestForUser:
         _make_article(session, id=1, importance=8.0)
         session.commit()
 
-        with patch("src.personalization.digest_builder.get_article_embeddings", return_value={}), \
-             patch("src.personalization.digest_builder.compute_user_embedding", return_value=None), \
-             patch("src.personalization.digest_builder.get_ml_profile", return_value=profile):
-            result = build_digest_for_user(session, user, digest_date=today, manual=True)
+        with (
+            patch(
+                "src.personalization.digest_builder.get_article_embeddings",
+                return_value={},
+            ),
+            patch(
+                "src.personalization.digest_builder.compute_user_embedding",
+                return_value=None,
+            ),
+            patch(
+                "src.personalization.digest_builder.get_ml_profile",
+                return_value=profile,
+            ),
+        ):
+            result = build_digest_for_user(
+                session, user, digest_date=today, manual=True
+            )
 
         # Should create a new digest (trigger=manual)
         assert result.trigger == "manual"
@@ -403,9 +467,19 @@ class TestBuildDigestForUser:
     def test_creates_empty_digest_when_no_articles(self, session):
         user = _make_user(session)
 
-        with patch("src.personalization.digest_builder.get_article_embeddings", return_value={}), \
-             patch("src.personalization.digest_builder.compute_user_embedding", return_value=None), \
-             patch("src.personalization.digest_builder.get_ml_profile", return_value=None):
+        with (
+            patch(
+                "src.personalization.digest_builder.get_article_embeddings",
+                return_value={},
+            ),
+            patch(
+                "src.personalization.digest_builder.compute_user_embedding",
+                return_value=None,
+            ),
+            patch(
+                "src.personalization.digest_builder.get_ml_profile", return_value=None
+            ),
+        ):
             digest = build_digest_for_user(session, user, manual=True)
 
         assert digest is not None
@@ -429,14 +503,33 @@ class TestBuildDigestForUser:
 
         # 3 news + 3 research articles
         for i in range(3):
-            _make_article(session, id=i + 1, source="techcrunch", category="product", importance=8.0)
+            _make_article(
+                session,
+                id=i + 1,
+                source="techcrunch",
+                category="product",
+                importance=8.0,
+            )
         for i in range(3):
-            _make_article(session, id=i + 4, source="arxiv", category="research", importance=7.0)
+            _make_article(
+                session, id=i + 4, source="arxiv", category="research", importance=7.0
+            )
         session.commit()
 
-        with patch("src.personalization.digest_builder.get_article_embeddings", return_value={}), \
-             patch("src.personalization.digest_builder.compute_user_embedding", return_value=None), \
-             patch("src.personalization.digest_builder.get_ml_profile", return_value=profile):
+        with (
+            patch(
+                "src.personalization.digest_builder.get_article_embeddings",
+                return_value={},
+            ),
+            patch(
+                "src.personalization.digest_builder.compute_user_embedding",
+                return_value=None,
+            ),
+            patch(
+                "src.personalization.digest_builder.get_ml_profile",
+                return_value=profile,
+            ),
+        ):
             digest = build_digest_for_user(session, user, manual=True)
 
         links = session.exec(
@@ -451,4 +544,8 @@ class TestBuildDigestForUser:
             elif link.display_order >= 100:
                 # Research section
                 article = session.get(Article, link.article_id)
-                assert article.source_name in {"arxiv", "github", "huggingface"} or article.category in {"research", "open_source"}
+                assert article.source_name in {
+                    "arxiv",
+                    "github",
+                    "huggingface",
+                } or article.category in {"research", "open_source"}

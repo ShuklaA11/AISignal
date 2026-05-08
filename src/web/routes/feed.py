@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Query, Request
@@ -15,8 +14,11 @@ from src.personalization.scorer import score_article_for_user_ml
 from src.storage.database import session_scope
 from src.storage.models import Article, ArticleSummary
 from src.storage.queries import (
-    get_ml_profile, get_read_article_ids, get_saved_article_ids,
-    get_user_by_id, record_impressions,
+    get_ml_profile,
+    get_read_article_ids,
+    get_saved_article_ids,
+    get_user_by_id,
+    record_impressions,
 )
 from src.web.template_engine import templates
 
@@ -25,9 +27,15 @@ router = APIRouter()
 # Map source_name values to display groups
 SOURCE_GROUPS = {
     "RSS News": [
-        "techcrunch_ai", "venturebeat_ai", "mit_tech_review_ai",
-        "the_verge_ai", "openai_blog", "anthropic_blog",
-        "deepmind_blog", "meta_ai_blog", "huggingface_blog",
+        "techcrunch_ai",
+        "venturebeat_ai",
+        "mit_tech_review_ai",
+        "the_verge_ai",
+        "openai_blog",
+        "anthropic_blog",
+        "deepmind_blog",
+        "meta_ai_blog",
+        "huggingface_blog",
     ],
     "Research & Open Source": ["arxiv", "huggingface", "github"],
 }
@@ -38,11 +46,25 @@ ARTICLES_PER_PAGE = 30
 
 
 _DEFAULT_TOPICS = [
-    "NLP", "Computer Vision", "Reinforcement Learning", "ML Theory",
-    "AI Safety", "Multimodal", "Robotics", "AI Agents",
-    "LLM APIs", "AI Infrastructure", "AI Startups", "Enterprise AI",
-    "AI Regulation", "Fundraising", "Open Source Models", "AI Art",
-    "AI Coding Tools", "AI Hardware", "Tutorials",
+    "NLP",
+    "Computer Vision",
+    "Reinforcement Learning",
+    "ML Theory",
+    "AI Safety",
+    "Multimodal",
+    "Robotics",
+    "AI Agents",
+    "LLM APIs",
+    "AI Infrastructure",
+    "AI Startups",
+    "Enterprise AI",
+    "AI Regulation",
+    "Fundraising",
+    "Open Source Models",
+    "AI Art",
+    "AI Coding Tools",
+    "AI Hardware",
+    "Tutorials",
 ]
 
 
@@ -62,18 +84,26 @@ def _score_articles(session, articles, user):
     if not articles:
         return
     ml_profile = get_ml_profile(session, user.id)
-    from src.embeddings.similarity import compute_embedding_factor, compute_user_embedding
+    from src.embeddings.similarity import (
+        compute_embedding_factor,
+        compute_user_embedding,
+    )
     from src.storage.queries import get_article_embeddings
+
     article_ids = [a.id for a in articles]
     embedding_lookup = get_article_embeddings(session, article_ids)
     user_embedding = compute_user_embedding(session, user.id, embedding_lookup)
 
     for article in articles:
         emb_factor = compute_embedding_factor(
-            embedding_lookup.get(article.id), user_embedding,
+            embedding_lookup.get(article.id),
+            user_embedding,
         )
         article._personalized_score = score_article_for_user_ml(
-            article, user, ml_profile, embedding_factor=emb_factor,
+            article,
+            user,
+            ml_profile,
+            embedding_factor=emb_factor,
         )
 
     # Use absolute scale: MAX_SCORE (20.0) is the theoretical ceiling.
@@ -90,11 +120,23 @@ def _score_articles(session, articles, user):
     else:
         # All articles scored identically — use absolute scale
         from src.personalization.scorer import MAX_SCORE
+
         for article in articles:
-            article._display_pct = int(min(99, (article._personalized_score / MAX_SCORE) * 100))
+            article._display_pct = int(
+                min(99, (article._personalized_score / MAX_SCORE) * 100)
+            )
 
 
-def _query_articles(session, group=None, levels=None, topics=None, sources=None, user=None, sort="for_you", read_ids=None):
+def _query_articles(
+    session,
+    group=None,
+    levels=None,
+    topics=None,
+    sources=None,
+    user=None,
+    sort="for_you",
+    read_ids=None,
+):
     """Query up to 200 articles for a source group, with optional sidebar filters and personalization.
 
     sort="for_you" — score and rank by personalization (default for logged-in)
@@ -128,10 +170,7 @@ def _query_articles(session, group=None, levels=None, topics=None, sources=None,
     # Topic filtering requires JSON field inspection — keep in Python
     if topics:
         topics_set = set(topics)
-        articles = [
-            a for a in articles
-            if topics_set.intersection(set(a.topics or []))
-        ]
+        articles = [a for a in articles if topics_set.intersection(set(a.topics or []))]
 
     # Always compute match scores when logged in
     if user:
@@ -145,7 +184,9 @@ def _query_articles(session, group=None, levels=None, topics=None, sources=None,
         # Record impressions for ML learning (all views, not just for_you)
         feed_view = sort or "recent"
         if articles:
-            record_impressions(session, user.id, [a.id for a in articles], group, feed_view=feed_view)
+            record_impressions(
+                session, user.id, [a.id for a in articles], group, feed_view=feed_view
+            )
 
     return articles
 
@@ -167,10 +208,18 @@ def _load_summaries(session, articles, role: str = "enthusiast") -> dict[int, st
     return {r.article_id: r.summary_text for r in rows}
 
 
-@router.get("/feed", response_class=HTMLResponse,
-            summary="Article feed",
-            description="Public feed page with source group tabs, personalized/chronological sort, and topic/level/source filter sidebar. No login required.")
-async def feed_page(request: Request, group: Optional[str] = None, sort: Optional[str] = None, page: int = 1):
+@router.get(
+    "/feed",
+    response_class=HTMLResponse,
+    summary="Article feed",
+    description="Public feed page with source group tabs, personalized/chronological sort, and topic/level/source filter sidebar. No login required.",
+)
+async def feed_page(
+    request: Request,
+    group: Optional[str] = None,
+    sort: Optional[str] = None,
+    page: int = 1,
+):
     """Public feed page with group tabs, sort toggle, and filter sidebar."""
     active_group = group or DEFAULT_GROUP
     if active_group not in SOURCE_GROUPS:
@@ -189,7 +238,11 @@ async def feed_page(request: Request, group: Optional[str] = None, sort: Optiona
 
         read_ids = get_read_article_ids(session, user.id) if user else set()
         all_articles = _query_articles(
-            session, group=active_group, user=user, sort=active_sort, read_ids=read_ids,
+            session,
+            group=active_group,
+            user=user,
+            sort=active_sort,
+            read_ids=read_ids,
         )
 
         # Paginate
@@ -225,9 +278,12 @@ async def feed_page(request: Request, group: Optional[str] = None, sort: Optiona
         )
 
 
-@router.get("/api/feed/articles", response_class=HTMLResponse,
-            summary="Filter feed articles",
-            description="HTMX endpoint returning filtered article HTML partials. Supports group, sort, level, topic, and source filters with pagination.")
+@router.get(
+    "/api/feed/articles",
+    response_class=HTMLResponse,
+    summary="Filter feed articles",
+    description="HTMX endpoint returning filtered article HTML partials. Supports group, sort, level, topic, and source filters with pagination.",
+)
 async def feed_articles_filter(
     request: Request,
     group: Optional[str] = Query(None),
@@ -252,8 +308,14 @@ async def feed_articles_filter(
         read_ids = get_read_article_ids(session, user.id) if user else set()
 
         all_articles = _query_articles(
-            session, group=active_group, levels=level, topics=topic, sources=source,
-            user=user, sort=active_sort, read_ids=read_ids,
+            session,
+            group=active_group,
+            levels=level,
+            topics=topic,
+            sources=source,
+            user=user,
+            sort=active_sort,
+            read_ids=read_ids,
         )
 
         # Paginate

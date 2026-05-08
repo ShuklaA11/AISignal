@@ -1,4 +1,5 @@
 """Tests for the section taxonomy."""
+
 import pytest
 
 from src.sections import (
@@ -47,7 +48,9 @@ def test_is_valid_section_accepts_known_values(value: str) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("value", ["", "Research", "RESEARCH", "frontier", "discourse", None])
+@pytest.mark.parametrize(
+    "value", ["", "Research", "RESEARCH", "frontier", "discourse", None]
+)
 def test_is_valid_section_rejects_unknown_values(value: str | None) -> None:
     assert is_valid_section(value) is False
 

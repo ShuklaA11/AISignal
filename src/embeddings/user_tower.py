@@ -15,10 +15,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from sqlmodel import Session, select, func
+from sqlmodel import Session, func, select
 
 from src.embeddings.provider import EMBEDDING_DIM
-from src.storage.models import ArticleEmbedding, FeedImpression, ReadArticle, SavedArticle
+from src.storage.models import (
+    FeedImpression,
+    ReadArticle,
+    SavedArticle,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +78,9 @@ def _pool_embeddings(embeddings: list[np.ndarray], max_items: int = 20) -> np.nd
 
 
 def build_user_features(
-    session: Session, user_id: int, embedding_lookup: dict[int, np.ndarray],
+    session: Session,
+    user_id: int,
+    embedding_lookup: dict[int, np.ndarray],
 ) -> np.ndarray | None:
     """Build a 128-dim feature vector from user engagement history.
 
@@ -85,20 +91,24 @@ def build_user_features(
       [96:128] - engagement statistics (click rate, save rate, etc.)
     """
     # Saved articles
-    saved_ids = set(session.exec(
-        select(SavedArticle.article_id)
-        .where(SavedArticle.user_id == user_id)
-        .order_by(SavedArticle.saved_at.desc())
-        .limit(50)
-    ).all())
+    saved_ids = set(
+        session.exec(
+            select(SavedArticle.article_id)
+            .where(SavedArticle.user_id == user_id)
+            .order_by(SavedArticle.saved_at.desc())
+            .limit(50)
+        ).all()
+    )
 
     # Read/clicked articles
-    read_ids = set(session.exec(
-        select(ReadArticle.article_id)
-        .where(ReadArticle.user_id == user_id)
-        .order_by(ReadArticle.read_at.desc())
-        .limit(50)
-    ).all())
+    read_ids = set(
+        session.exec(
+            select(ReadArticle.article_id)
+            .where(ReadArticle.user_id == user_id)
+            .order_by(ReadArticle.read_at.desc())
+            .limit(50)
+        ).all()
+    )
     clicked_ids = read_ids - saved_ids  # clicked but not saved
 
     # Skipped: shown but not engaged
@@ -117,8 +127,12 @@ def build_user_features(
         return None
 
     saved_embs = [embedding_lookup[aid] for aid in saved_ids if aid in embedding_lookup]
-    clicked_embs = [embedding_lookup[aid] for aid in clicked_ids if aid in embedding_lookup]
-    skipped_embs = [embedding_lookup[aid] for aid in skipped_ids if aid in embedding_lookup]
+    clicked_embs = [
+        embedding_lookup[aid] for aid in clicked_ids if aid in embedding_lookup
+    ]
+    skipped_embs = [
+        embedding_lookup[aid] for aid in skipped_ids if aid in embedding_lookup
+    ]
 
     # Pool each group to 32 dims
     saved_pool = _pool_embeddings(saved_embs)
@@ -126,21 +140,27 @@ def build_user_features(
     skipped_pool = _pool_embeddings(skipped_embs)
 
     # Engagement stats (32-dim, zero-padded)
-    total_imps = session.exec(
-        select(func.count(FeedImpression.id))
-        .where(FeedImpression.user_id == user_id)
-    ).one() or 1
+    total_imps = (
+        session.exec(
+            select(func.count(FeedImpression.id)).where(
+                FeedImpression.user_id == user_id
+            )
+        ).one()
+        or 1
+    )
     total_clicks = len(read_ids)
     total_saves = len(saved_ids)
     total_skips = len(skipped_ids)
 
     stats = np.zeros(POOL_DIM, dtype=np.float32)
     stats[0] = total_clicks / max(total_imps, 1)  # CTR
-    stats[1] = total_saves / max(total_imps, 1)    # save rate
-    stats[2] = min(total_imps / 100, 1.0)          # interaction maturity
-    stats[3] = total_skips / max(total_imps, 1)    # skip rate
+    stats[1] = total_saves / max(total_imps, 1)  # save rate
+    stats[2] = min(total_imps / 100, 1.0)  # interaction maturity
+    stats[3] = total_skips / max(total_imps, 1)  # skip rate
     stats[4] = len(saved_embs) / max(len(saved_ids), 1)  # embedding coverage (saved)
-    stats[5] = len(clicked_embs) / max(len(clicked_ids), 1)  # embedding coverage (clicked)
+    stats[5] = len(clicked_embs) / max(
+        len(clicked_ids), 1
+    )  # embedding coverage (clicked)
     # Diversity: std of saved embeddings projected
     if len(saved_embs) > 1:
         stacked = np.stack(saved_embs) @ _PROJ
@@ -151,7 +171,9 @@ def build_user_features(
 
 
 def _collect_training_pairs(
-    session: Session, user_id: int, embedding_lookup: dict[int, np.ndarray],
+    session: Session,
+    user_id: int,
+    embedding_lookup: dict[int, np.ndarray],
 ) -> tuple[list[np.ndarray], list[np.ndarray], list[int]]:
     """Collect (article_embedding, label) pairs for training.
 
@@ -159,14 +181,16 @@ def _collect_training_pairs(
     where label = +1 for engaged, -1 for skipped.
     Applies 3:1 negative sampling ratio.
     """
-    saved_ids = set(session.exec(
-        select(SavedArticle.article_id)
-        .where(SavedArticle.user_id == user_id)
-    ).all())
-    read_ids = set(session.exec(
-        select(ReadArticle.article_id)
-        .where(ReadArticle.user_id == user_id)
-    ).all())
+    saved_ids = set(
+        session.exec(
+            select(SavedArticle.article_id).where(SavedArticle.user_id == user_id)
+        ).all()
+    )
+    read_ids = set(
+        session.exec(
+            select(ReadArticle.article_id).where(ReadArticle.user_id == user_id)
+        ).all()
+    )
     positive_ids = saved_ids | read_ids
 
     skipped_stmt = (
@@ -204,8 +228,11 @@ def _collect_training_pairs(
 
 
 def train_user_tower(
-    session: Session, user_id: int, embedding_lookup: dict[int, np.ndarray],
-    epochs: int = 50, lr: float = 1e-3,
+    session: Session,
+    user_id: int,
+    embedding_lookup: dict[int, np.ndarray],
+    epochs: int = 50,
+    lr: float = 1e-3,
 ) -> TrainingResult | None:
     """Train a UserTower model for a specific user.
 
@@ -217,14 +244,18 @@ def train_user_tower(
         return None
 
     article_embs, labels, num_positives = _collect_training_pairs(
-        session, user_id, embedding_lookup,
+        session,
+        user_id,
+        embedding_lookup,
     )
     if num_positives < MIN_TRAINING_SAMPLES:
         return None
 
     # Convert to tensors
     device = torch.device("cpu")  # small model, CPU is fine
-    features_t = torch.tensor(user_features, dtype=torch.float32, device=device).unsqueeze(0)
+    features_t = torch.tensor(
+        user_features, dtype=torch.float32, device=device
+    ).unsqueeze(0)
     article_t = torch.tensor(np.stack(article_embs), dtype=torch.float32, device=device)
     labels_t = torch.tensor(labels, dtype=torch.float32, device=device)
 
@@ -258,7 +289,8 @@ def train_user_tower(
 
 
 def compute_learned_user_embedding(
-    model: UserTower, user_features: np.ndarray,
+    model: UserTower,
+    user_features: np.ndarray,
 ) -> np.ndarray:
     """Run inference through a trained UserTower to get a 1024-dim embedding."""
     model.eval()

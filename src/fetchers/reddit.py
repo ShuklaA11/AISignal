@@ -60,7 +60,9 @@ class RedditFetcher(BaseFetcher):
                     title=post.title.strip(),
                     content=content,
                     author=str(post.author) if post.author else None,
-                    published_at=datetime.fromtimestamp(post.created_utc, tz=timezone.utc),
+                    published_at=datetime.fromtimestamp(
+                        post.created_utc, tz=timezone.utc
+                    ),
                     source_name=f"r/{post.subreddit.display_name}",
                     source_type="api",
                     extra_metadata={

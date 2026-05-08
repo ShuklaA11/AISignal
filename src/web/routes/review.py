@@ -1,7 +1,6 @@
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from sqlmodel import select
 
 from src.storage.models import Article, ArticleSummary, utcnow
@@ -11,14 +10,21 @@ from src.web.template_engine import templates
 router = APIRouter()
 
 
-@router.get("/review", response_class=HTMLResponse,
-            summary="Review dashboard",
-            description="Admin dashboard to review, approve, or reject today's processed articles with all summary variants.")
-@router.get("/review/{date_str}", response_class=HTMLResponse,
-            summary="Review dashboard by date",
-            description="Admin dashboard for a specific date's articles.")
-async def review_page(request: Request, date_str: str | None = None,
-                      auth: tuple = Depends(require_admin)):
+@router.get(
+    "/review",
+    response_class=HTMLResponse,
+    summary="Review dashboard",
+    description="Admin dashboard to review, approve, or reject today's processed articles with all summary variants.",
+)
+@router.get(
+    "/review/{date_str}",
+    response_class=HTMLResponse,
+    summary="Review dashboard by date",
+    description="Admin dashboard for a specific date's articles.",
+)
+async def review_page(
+    request: Request, date_str: str | None = None, auth: tuple = Depends(require_admin)
+):
     user, session = auth
     try:
         today = utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -34,9 +40,8 @@ async def review_page(request: Request, date_str: str | None = None,
         # Bulk-load all summaries for these articles in a single query
         article_ids = [a.id for a in articles]
         if article_ids:
-            s_stmt = (
-                select(ArticleSummary)
-                .where(ArticleSummary.article_id.in_(article_ids))
+            s_stmt = select(ArticleSummary).where(
+                ArticleSummary.article_id.in_(article_ids)
             )
             all_summaries = list(session.exec(s_stmt).all())
         else:
@@ -49,11 +54,13 @@ async def review_page(request: Request, date_str: str | None = None,
 
         articles_with_data = []
         for article in articles:
-            articles_with_data.append({
-                "article": article,
-                "summaries": summary_lookup.get(article.id, {}),
-                "topics": article.topics,
-            })
+            articles_with_data.append(
+                {
+                    "article": article,
+                    "summaries": summary_lookup.get(article.id, {}),
+                    "topics": article.topics,
+                }
+            )
 
         return templates.TemplateResponse(
             "review.html",

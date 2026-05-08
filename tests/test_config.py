@@ -1,4 +1,5 @@
 """Tests for config schema extensions: tagged RSS feeds and section weights."""
+
 import pytest
 from pydantic import ValidationError
 
@@ -8,7 +9,6 @@ from src.sections import (
     SECTION_BUILDER,
     SECTION_RESEARCH,
 )
-
 
 # -- RSSFeed schema -----------------------------------------------------------
 
@@ -66,9 +66,11 @@ def test_section_weights_neutral_when_unconfigured() -> None:
 
 @pytest.mark.unit
 def test_section_weights_role_specific() -> None:
-    s = _settings_with_weights({
-        "industry": {"builder": 1.5, "releases": 1.3},
-    })
+    s = _settings_with_weights(
+        {
+            "industry": {"builder": 1.5, "releases": 1.3},
+        }
+    )
     weights = s.get_section_weights("industry")
     assert weights["builder"] == 1.5
     assert weights["releases"] == 1.3
@@ -78,9 +80,11 @@ def test_section_weights_role_specific() -> None:
 
 @pytest.mark.unit
 def test_section_weights_falls_back_to_default() -> None:
-    s = _settings_with_weights({
-        "default": {"research": 0.5},
-    })
+    s = _settings_with_weights(
+        {
+            "default": {"research": 0.5},
+        }
+    )
     weights = s.get_section_weights("never_configured_role")
     assert weights["research"] == 0.5
     assert weights[SECTION_BUILDER] == 1.0  # neutral fallback
@@ -88,19 +92,23 @@ def test_section_weights_falls_back_to_default() -> None:
 
 @pytest.mark.unit
 def test_section_weights_role_overrides_default() -> None:
-    s = _settings_with_weights({
-        "default": {"research": 0.5},
-        "researcher": {"research": 2.0},
-    })
+    s = _settings_with_weights(
+        {
+            "default": {"research": 0.5},
+            "researcher": {"research": 2.0},
+        }
+    )
     assert s.get_section_weights("researcher")["research"] == 2.0
     assert s.get_section_weights("other_role")["research"] == 0.5
 
 
 @pytest.mark.unit
 def test_section_weights_ignores_unknown_section_keys() -> None:
-    s = _settings_with_weights({
-        "default": {"research": 1.5, "frontier": 99.0},
-    })
+    s = _settings_with_weights(
+        {
+            "default": {"research": 1.5, "frontier": 99.0},
+        }
+    )
     weights = s.get_section_weights("default")
     assert weights["research"] == 1.5
     assert "frontier" not in weights

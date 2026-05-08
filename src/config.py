@@ -72,7 +72,7 @@ class ScheduleSettings(BaseModel):
     fetch_minute: int = 0
     process_hour: int = 6
     process_minute: int = 30
-    auto_send_hour: int = 9   # 9:00 AM CST (CronTrigger uses system timezone)
+    auto_send_hour: int = 9  # 9:00 AM CST (CronTrigger uses system timezone)
     auto_send_minute: int = 0
 
 
@@ -104,22 +104,41 @@ class Settings(BaseSettings):
         )
     )
 
-    llm: LLMSettings = Field(default_factory=lambda: LLMSettings(
-        **{**_yaml_config.get("llm", {}), **_env_overrides("LLM", set(LLMSettings.model_fields))}
-    ))
-    email: EmailSettings = Field(default_factory=lambda: EmailSettings(
-        **{**_yaml_config.get("email", {}), **_env_overrides("EMAIL", set(EmailSettings.model_fields))}
-    ))
-    schedule: ScheduleSettings = Field(default_factory=lambda: ScheduleSettings(
-        **{**_yaml_config.get("schedule", {}), **_env_overrides("SCHEDULE", set(ScheduleSettings.model_fields))}
-    ))
+    llm: LLMSettings = Field(
+        default_factory=lambda: LLMSettings(
+            **{
+                **_yaml_config.get("llm", {}),
+                **_env_overrides("LLM", set(LLMSettings.model_fields)),
+            }
+        )
+    )
+    email: EmailSettings = Field(
+        default_factory=lambda: EmailSettings(
+            **{
+                **_yaml_config.get("email", {}),
+                **_env_overrides("EMAIL", set(EmailSettings.model_fields)),
+            }
+        )
+    )
+    schedule: ScheduleSettings = Field(
+        default_factory=lambda: ScheduleSettings(
+            **{
+                **_yaml_config.get("schedule", {}),
+                **_env_overrides("SCHEDULE", set(ScheduleSettings.model_fields)),
+            }
+        )
+    )
 
     rss_feeds: list[RSSFeed] = Field(
-        default_factory=lambda: [RSSFeed(**f) for f in _yaml_config.get("rss_feeds", [])]
+        default_factory=lambda: [
+            RSSFeed(**f) for f in _yaml_config.get("rss_feeds", [])
+        ]
     )
 
     arxiv_categories: list[str] = Field(
-        default_factory=lambda: _yaml_config.get("arxiv", {}).get("categories", ["cs.AI", "cs.CL", "cs.CV", "cs.LG"])
+        default_factory=lambda: _yaml_config.get("arxiv", {}).get(
+            "categories", ["cs.AI", "cs.CL", "cs.CV", "cs.LG"]
+        )
     )
     arxiv_max_results: int = Field(
         default_factory=lambda: _yaml_config.get("arxiv", {}).get("max_results", 50)
@@ -160,7 +179,9 @@ class Settings(BaseSettings):
         and finally to a neutral all-1.0 map. Always returns a complete map
         covering every known section."""
         neutral = {section: 1.0 for section in ALL_SECTIONS}
-        profile = self.section_weights.get(role) or self.section_weights.get("default") or {}
+        profile = (
+            self.section_weights.get(role) or self.section_weights.get("default") or {}
+        )
         return {**neutral, **{k: v for k, v in profile.items() if k in ALL_SECTIONS}}
 
     # API keys loaded from environment / .env
@@ -195,7 +216,7 @@ def load_settings() -> Settings:
         raise RuntimeError(
             "NEWSLETTER_SECRET_KEY is missing, too short (min 16 chars), or a known placeholder. "
             "This is required for session security, signed tokens, and password reset links. "
-            "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+            'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
         )
 
     # Validate LLM API keys based on provider

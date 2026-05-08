@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from random import betavariate
 
-from sqlmodel import Session, select, func, case
+from sqlmodel import Session, case, func, select
 
 from src.storage.models import Article, FeedImpression
 
@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 def apply_thompson_exploration(
-    articles: list[Article], user_id: int, session: Session,
+    articles: list[Article],
+    user_id: int,
+    session: Session,
 ) -> list[Article]:
     """Re-rank articles using Thompson sampling on per-article engagement.
 

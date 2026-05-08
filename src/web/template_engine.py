@@ -3,7 +3,6 @@
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
 WEB_DIR = Path(__file__).parent

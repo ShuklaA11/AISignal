@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import html
 import logging
-from datetime import datetime
 
 import feedparser
 from dateutil.parser import parse as parse_date
@@ -15,25 +14,75 @@ logger = logging.getLogger(__name__)
 
 # Feeds from dedicated AI labs/companies — all content is relevant by definition
 _AI_NATIVE_FEEDS = {
-    "openai_blog", "anthropic_blog", "deepmind_blog",
-    "huggingface_blog", "meta_ai_blog",
+    "openai_blog",
+    "anthropic_blog",
+    "deepmind_blog",
+    "huggingface_blog",
+    "meta_ai_blog",
 }
 
 # Keywords (lowercased) that signal AI/ML relevance in title or content
 _AI_KEYWORDS = {
-    "ai", "artificial intelligence", "machine learning", "deep learning",
-    "neural network", "llm", "large language model", "gpt", "chatgpt",
-    "openai", "anthropic", "claude", "gemini", "copilot", "midjourney",
-    "stable diffusion", "transformer", "diffusion model", "generative",
-    "nlp", "natural language", "computer vision", "reinforcement learning",
-    "robotics", "autonomous", "self-driving", "deepfake", "ai safety",
-    "alignment", "agi", "superintelligence", "foundation model",
-    "fine-tuning", "fine tuning", "rag", "retrieval augmented",
-    "embedding", "vector database", "prompt engineering", "inference",
-    "training data", "gpu", "nvidia", "tensor", "pytorch", "tensorflow",
-    "hugging face", "huggingface", "ollama", "llama", "mistral",
-    "multimodal", "text-to-image", "text-to-video", "speech recognition",
-    "ai agent", "agentic", "ai model", "ml model", "dataset",
+    "ai",
+    "artificial intelligence",
+    "machine learning",
+    "deep learning",
+    "neural network",
+    "llm",
+    "large language model",
+    "gpt",
+    "chatgpt",
+    "openai",
+    "anthropic",
+    "claude",
+    "gemini",
+    "copilot",
+    "midjourney",
+    "stable diffusion",
+    "transformer",
+    "diffusion model",
+    "generative",
+    "nlp",
+    "natural language",
+    "computer vision",
+    "reinforcement learning",
+    "robotics",
+    "autonomous",
+    "self-driving",
+    "deepfake",
+    "ai safety",
+    "alignment",
+    "agi",
+    "superintelligence",
+    "foundation model",
+    "fine-tuning",
+    "fine tuning",
+    "rag",
+    "retrieval augmented",
+    "embedding",
+    "vector database",
+    "prompt engineering",
+    "inference",
+    "training data",
+    "gpu",
+    "nvidia",
+    "tensor",
+    "pytorch",
+    "tensorflow",
+    "hugging face",
+    "huggingface",
+    "ollama",
+    "llama",
+    "mistral",
+    "multimodal",
+    "text-to-image",
+    "text-to-video",
+    "speech recognition",
+    "ai agent",
+    "agentic",
+    "ai model",
+    "ml model",
+    "dataset",
 }
 
 
@@ -75,11 +124,15 @@ class RSSFetcher(BaseFetcher):
         feed = await asyncio.to_thread(feedparser.parse, self.feed_url, agent=ua)
 
         if feed.bozo and not feed.entries:
-            logger.warning(f"[{self._name}] Feed parse error for {self.feed_url}: {feed.bozo_exception}")
+            logger.warning(
+                f"[{self._name}] Feed parse error for {self.feed_url}: {feed.bozo_exception}"
+            )
             return []
 
         if not feed.entries:
-            logger.warning(f"[{self._name}] Feed returned 0 entries from {self.feed_url}")
+            logger.warning(
+                f"[{self._name}] Feed returned 0 entries from {self.feed_url}"
+            )
             return []
 
         articles = []
@@ -107,7 +160,9 @@ class RSSFetcher(BaseFetcher):
             tags = [t.get("term", "") for t in entry.get("tags", []) if t.get("term")]
 
             # Skip non-AI articles from general news feeds
-            if self._name not in _AI_NATIVE_FEEDS and not _is_ai_relevant(title, content):
+            if self._name not in _AI_NATIVE_FEEDS and not _is_ai_relevant(
+                title, content
+            ):
                 logger.debug(f"[{self._name}] Skipped non-AI article: {title[:60]}")
                 continue
 

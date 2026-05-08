@@ -3,27 +3,35 @@
 from __future__ import annotations
 
 import logging
-from datetime import date as date_type, datetime, time
+from datetime import date as date_type
+from datetime import datetime, time
 from random import betavariate
 
 import numpy as np
 from sqlmodel import Session, case, func, select
 
 from src.embeddings.similarity import (
-    compute_embedding_factor, compute_user_embedding, cosine_similarity,
+    compute_embedding_factor,
+    compute_user_embedding,
+    cosine_similarity,
 )
 from src.personalization.scorer import score_article_for_user_ml
 from src.storage.models import (
-    Article, Digest, DigestArticle, FeedImpression, User, utcnow,
+    Article,
+    Digest,
+    DigestArticle,
+    FeedImpression,
+    User,
+    utcnow,
 )
 from src.storage.queries import get_article_embeddings, get_ml_profile
 
 logger = logging.getLogger(__name__)
 
 # Digest sizing per section
-NEWS_ARTICLES = 3       # News & industry stories
-RESEARCH_ARTICLES = 3   # Papers, repos, open-source
-EXPLORE_ARTICLES = 3    # Thompson exploration picks
+NEWS_ARTICLES = 3  # News & industry stories
+RESEARCH_ARTICLES = 3  # Papers, repos, open-source
+EXPLORE_ARTICLES = 3  # Thompson exploration picks
 
 # Sources/categories that count as "research & repos"
 RESEARCH_SOURCES = {"arxiv", "github", "huggingface"}
@@ -43,8 +51,6 @@ REDUNDANCY_THRESHOLD = 0.85
 MMR_LAMBDA = 0.7
 
 
-
-
 def _mmr_select(
     scored_articles: list[tuple[Article, float]],
     embeddings: dict[int, np.ndarray],
@@ -61,8 +67,7 @@ def _mmr_select(
 
     max_score = max(s for _, s in scored_articles) or 1.0
     candidates = [
-        (article, score, score / max_score)
-        for article, score in scored_articles
+        (article, score, score / max_score) for article, score in scored_articles
     ]
 
     selected: list[tuple[Article, float]] = []
@@ -80,8 +85,7 @@ def _mmr_select(
                 mmr_score = norm_score
             else:
                 max_sim = max(
-                    cosine_similarity(emb, sel_emb)
-                    for sel_emb in selected_embeddings
+                    cosine_similarity(emb, sel_emb) for sel_emb in selected_embeddings
                 )
 
                 if max_sim > REDUNDANCY_THRESHOLD:
@@ -106,7 +110,9 @@ def _mmr_select(
     return selected
 
 
-def _interleave_sources(articles: list[tuple[Article, float]]) -> list[tuple[Article, float]]:
+def _interleave_sources(
+    articles: list[tuple[Article, float]],
+) -> list[tuple[Article, float]]:
     """Reorder articles to avoid consecutive items from the same source.
 
     Greedy round-robin: picks from the source with the most remaining articles
@@ -128,7 +134,8 @@ def _interleave_sources(articles: list[tuple[Article, float]]) -> list[tuple[Art
     while any(by_source.values()):
         # Pick the source with the most remaining articles (but not the same as last)
         candidates = [
-            (src, items) for src, items in by_source.items()
+            (src, items)
+            for src, items in by_source.items()
             if items and src != last_source
         ]
         if not candidates:
@@ -304,10 +311,14 @@ def build_digest_for_user(
     scored = []
     for article in articles:
         emb_factor = compute_embedding_factor(
-            embeddings.get(article.id), user_embedding,
+            embeddings.get(article.id),
+            user_embedding,
         )
         score = score_article_for_user_ml(
-            article, user, ml_profile, embedding_factor=emb_factor,
+            article,
+            user,
+            ml_profile,
+            embedding_factor=emb_factor,
         )
         scored.append((article, score))
     scored.sort(key=lambda x: x[1], reverse=True)
@@ -380,7 +391,9 @@ def build_digest_for_user(
         session.add(link)
 
     # Thompson exploration picks (negative display_order)
-    selected_ids = {a.id for a, _ in news_articles} | {a.id for a, _ in research_articles}
+    selected_ids = {a.id for a, _ in news_articles} | {
+        a.id for a, _ in research_articles
+    }
     explore = _thompson_explore(session, user.id, articles, selected_ids)
     for i, article in enumerate(explore):
         link = DigestArticle(

@@ -8,14 +8,9 @@ Covers:
 - consume_token: marks used, second consume returns None
 """
 
-from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from src.web.token_utils import (
-    EMAIL_VERIFICATION_EXPIRY,
-    PASSWORD_RESET_EXPIRY,
     consume_token,
     create_reset_token,
     create_verification_token,
@@ -24,10 +19,10 @@ from src.web.token_utils import (
     verify_token,
 )
 
-
 # ===========================================================================
 # 1. generate_token
 # ===========================================================================
+
 
 class TestGenerateToken:
     def test_returns_url_safe_string(self):
@@ -36,7 +31,8 @@ class TestGenerateToken:
         assert len(token) > 0
         # URL-safe base64 uses only these characters
         import re
-        assert re.match(r'^[A-Za-z0-9_-]+$', token)
+
+        assert re.match(r"^[A-Za-z0-9_-]+$", token)
 
     def test_different_each_call(self):
         tokens = {generate_token() for _ in range(50)}
@@ -46,6 +42,7 @@ class TestGenerateToken:
 # ===========================================================================
 # 2. hash_token
 # ===========================================================================
+
 
 class TestHashToken:
     def test_deterministic(self):
@@ -65,6 +62,7 @@ class TestHashToken:
 # 3. create_verification_token / create_reset_token
 # ===========================================================================
 
+
 class TestCreateTokens:
     @patch("src.web.token_utils.session_scope")
     def test_create_verification_token(self, mock_scope):
@@ -77,7 +75,7 @@ class TestCreateTokens:
         assert isinstance(raw, str)
         assert len(raw) > 0
         # Should have invalidated old tokens first
-        from src.storage.queries import invalidate_user_tokens
+
         mock_session.assert_any_call  # session was used
         # Verify invalidate_user_tokens was called via the session
         # The function calls invalidate_user_tokens(session, 1, "email_verification")
@@ -97,7 +95,9 @@ class TestCreateTokens:
     @patch("src.web.token_utils.create_token")
     @patch("src.web.token_utils.invalidate_user_tokens")
     @patch("src.web.token_utils.session_scope")
-    def test_verification_invalidates_old_tokens(self, mock_scope, mock_invalidate, mock_create):
+    def test_verification_invalidates_old_tokens(
+        self, mock_scope, mock_invalidate, mock_create
+    ):
         mock_session = MagicMock()
         mock_scope.return_value.__enter__ = MagicMock(return_value=mock_session)
         mock_scope.return_value.__exit__ = MagicMock(return_value=False)
@@ -113,7 +113,9 @@ class TestCreateTokens:
     @patch("src.web.token_utils.create_token")
     @patch("src.web.token_utils.invalidate_user_tokens")
     @patch("src.web.token_utils.session_scope")
-    def test_reset_invalidates_old_tokens(self, mock_scope, mock_invalidate, mock_create):
+    def test_reset_invalidates_old_tokens(
+        self, mock_scope, mock_invalidate, mock_create
+    ):
         mock_session = MagicMock()
         mock_scope.return_value.__enter__ = MagicMock(return_value=mock_session)
         mock_scope.return_value.__exit__ = MagicMock(return_value=False)
@@ -130,6 +132,7 @@ class TestCreateTokens:
 # 4. verify_token
 # ===========================================================================
 
+
 class TestVerifyToken:
     @patch("src.web.token_utils.get_token_by_hash")
     @patch("src.web.token_utils.session_scope")
@@ -145,7 +148,9 @@ class TestVerifyToken:
         result = verify_token("raw-token-abc", "email_verification")
         assert result == 7
         mock_get.assert_called_once_with(
-            mock_session, hash_token("raw-token-abc"), "email_verification",
+            mock_session,
+            hash_token("raw-token-abc"),
+            "email_verification",
         )
 
     @patch("src.web.token_utils.get_token_by_hash")
@@ -164,6 +169,7 @@ class TestVerifyToken:
 # ===========================================================================
 # 5. consume_token
 # ===========================================================================
+
 
 class TestConsumeToken:
     @patch("src.web.token_utils.mark_token_used")

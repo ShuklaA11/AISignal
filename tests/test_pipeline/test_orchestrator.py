@@ -6,18 +6,19 @@ Covers:
 - build_fetchers() with mocked Settings
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
-from unittest.mock import MagicMock, patch
 
 from src.fetchers.base import RawArticle
 from src.pipeline.orchestrator import _clean_title, build_fetchers, store_articles
 from src.storage.models import Article, utcnow
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def engine():
@@ -46,6 +47,7 @@ def _make_raw(title="Test Article", url="https://example.com/1", source="rss_tes
 # ---------------------------------------------------------------------------
 # _clean_title
 # ---------------------------------------------------------------------------
+
 
 class TestCleanTitle:
     def test_strips_dollar_signs(self):
@@ -87,6 +89,7 @@ class TestCleanTitle:
 # ---------------------------------------------------------------------------
 # store_articles
 # ---------------------------------------------------------------------------
+
 
 class TestStoreArticles:
     def test_stores_new_article(self, session):
@@ -158,7 +161,9 @@ class TestStoreArticles:
 
     def test_clean_title_applied(self, session):
         """LaTeX in titles is cleaned during storage."""
-        raw = [_make_raw(title=r"$\mathcal{O}(n)$ Algo", url="https://example.com/latex")]
+        raw = [
+            _make_raw(title=r"$\mathcal{O}(n)$ Algo", url="https://example.com/latex")
+        ]
         store_articles(session, raw, existing_fps=set())
         stored = session.get(Article, 1)
         assert "$" not in stored.title
@@ -169,6 +174,7 @@ class TestStoreArticles:
 # build_fetchers
 # ---------------------------------------------------------------------------
 
+
 class TestBuildFetchers:
     @patch("src.pipeline.orchestrator.RSSFetcher")
     @patch("src.pipeline.orchestrator.AnthropicBlogFetcher")
@@ -178,8 +184,14 @@ class TestBuildFetchers:
     @patch("src.pipeline.orchestrator.RedditFetcher")
     @patch("src.pipeline.orchestrator.TwitterFetcher")
     def test_all_fetchers_created(
-        self, mock_twitter, mock_reddit, mock_github, mock_arxiv,
-        mock_hf, mock_anthropic, mock_rss,
+        self,
+        mock_twitter,
+        mock_reddit,
+        mock_github,
+        mock_arxiv,
+        mock_hf,
+        mock_anthropic,
+        mock_rss,
     ):
         """With all credentials provided, all fetcher types are instantiated."""
         feed1 = MagicMock()
@@ -220,7 +232,12 @@ class TestBuildFetchers:
     @patch("src.pipeline.orchestrator.ArxivFetcher")
     @patch("src.pipeline.orchestrator.GitHubTrendingFetcher")
     def test_optional_fetchers_skipped_without_creds(
-        self, mock_github, mock_arxiv, mock_hf, mock_anthropic, mock_rss,
+        self,
+        mock_github,
+        mock_arxiv,
+        mock_hf,
+        mock_anthropic,
+        mock_rss,
     ):
         """Reddit and Twitter fetchers are skipped when credentials are absent."""
         settings = MagicMock()
@@ -231,8 +248,10 @@ class TestBuildFetchers:
         settings.reddit_client_secret = ""
         settings.twitter_bearer_token = ""
 
-        with patch("src.pipeline.orchestrator.RedditFetcher") as mock_reddit, \
-             patch("src.pipeline.orchestrator.TwitterFetcher") as mock_twitter:
+        with (
+            patch("src.pipeline.orchestrator.RedditFetcher") as mock_reddit,
+            patch("src.pipeline.orchestrator.TwitterFetcher") as mock_twitter,
+        ):
             fetchers = build_fetchers(settings)
             mock_reddit.assert_not_called()
             mock_twitter.assert_not_called()

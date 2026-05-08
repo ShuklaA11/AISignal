@@ -13,18 +13,20 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.llm.summarizer import (
+    adapt_summary_to_level,
     build_batch_prompt,
     parse_batch_response,
     process_articles_batch,
-    adapt_summary_to_level,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_article(index=0, title="Test Article", source="techcrunch", content="Some content"):
+
+def _make_article(
+    index=0, title="Test Article", source="techcrunch", content="Some content"
+):
     article = MagicMock()
     article.id = index
     article.title = title
@@ -36,6 +38,7 @@ def _make_article(index=0, title="Test Article", source="techcrunch", content="S
 # ---------------------------------------------------------------------------
 # build_batch_prompt
 # ---------------------------------------------------------------------------
+
 
 class TestBuildBatchPrompt:
     def test_includes_all_articles(self):
@@ -73,6 +76,7 @@ class TestBuildBatchPrompt:
 # ---------------------------------------------------------------------------
 # parse_batch_response
 # ---------------------------------------------------------------------------
+
 
 class TestParseBatchResponse:
     def test_valid_json_array(self):
@@ -132,6 +136,7 @@ class TestParseBatchResponse:
 # process_articles_batch
 # ---------------------------------------------------------------------------
 
+
 class TestProcessArticlesBatch:
     @pytest.mark.asyncio
     async def test_sends_prompt_and_parses_response(self):
@@ -156,7 +161,10 @@ class TestProcessArticlesBatch:
 
         # max_tokens should be 500 * len(articles) = 2500
         call_kwargs = mock_llm.generate.call_args
-        assert call_kwargs.kwargs.get("max_tokens") == 2500 or call_kwargs[1].get("max_tokens") == 2500
+        assert (
+            call_kwargs.kwargs.get("max_tokens") == 2500
+            or call_kwargs[1].get("max_tokens") == 2500
+        )
 
     @pytest.mark.asyncio
     async def test_handles_llm_returning_garbage(self):
@@ -173,11 +181,14 @@ class TestProcessArticlesBatch:
 # adapt_summary_to_level
 # ---------------------------------------------------------------------------
 
+
 class TestAdaptSummaryToLevel:
     @pytest.mark.asyncio
     async def test_intermediate_returns_as_is(self):
         mock_llm = AsyncMock()
-        result = await adapt_summary_to_level(mock_llm, "Original summary", "intermediate")
+        result = await adapt_summary_to_level(
+            mock_llm, "Original summary", "intermediate"
+        )
         assert result == "Original summary"
         mock_llm.generate.assert_not_called()
 

@@ -2,7 +2,6 @@
 
 import logging
 
-import numpy as np
 from sqlmodel import Session, select
 
 from src.embeddings.provider import generate_embeddings_batch
@@ -23,9 +22,8 @@ async def run_embedding_generation(session: Session, batch_size: int = 20) -> in
     existing_ids_stmt = select(ArticleEmbedding.article_id)
     existing_ids = set(session.exec(existing_ids_stmt).all())
 
-    articles_stmt = (
-        select(Article)
-        .where(Article.status.in_(["processed", "approved", "sent"]))
+    articles_stmt = select(Article).where(
+        Article.status.in_(["processed", "approved", "sent"])
     )
     all_articles = list(session.exec(articles_stmt).all())
     articles = [a for a in all_articles if a.id not in existing_ids]
@@ -41,7 +39,9 @@ async def run_embedding_generation(session: Session, batch_size: int = 20) -> in
         .where(ArticleSummary.article_id.in_(article_ids))
         .where(ArticleSummary.role == "enthusiast")
     )
-    summary_map = {s.article_id: s.summary_text for s in session.exec(summary_stmt).all()}
+    summary_map = {
+        s.article_id: s.summary_text for s in session.exec(summary_stmt).all()
+    }
 
     texts = []
     for article in articles:
@@ -62,8 +62,10 @@ async def run_embedding_generation(session: Session, batch_size: int = 20) -> in
     try:
         embeddings = await generate_embeddings_batch(texts, batch_size=batch_size)
     except Exception as e:
-        logger.error(f"Embedding generation failed (provider may be down): {e}. "
-                     f"{len(articles)} articles will be retried on next run.")
+        logger.error(
+            f"Embedding generation failed (provider may be down): {e}. "
+            f"{len(articles)} articles will be retried on next run."
+        )
         return 0
 
     # Phase 3: Store — persist results

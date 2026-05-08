@@ -1,17 +1,15 @@
 """Tests for the EmailSender: console delivery, digest rendering, and helper methods."""
 
 import logging
-from datetime import date, datetime
+from datetime import date
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from src.email_delivery.sender import EmailSender
-
 
 # ---------------------------------------------------------------------------
 # Helpers: build a mock Settings and fake domain objects
 # ---------------------------------------------------------------------------
+
 
 def _make_settings(provider: str = "console") -> MagicMock:
     email_settings = MagicMock()
@@ -30,7 +28,9 @@ def _make_settings(provider: str = "console") -> MagicMock:
     return settings
 
 
-def _make_user(user_id: int = 1, email: str = "alice@test.com", name: str = "Alice") -> MagicMock:
+def _make_user(
+    user_id: int = 1, email: str = "alice@test.com", name: str = "Alice"
+) -> MagicMock:
     user = MagicMock()
     user.id = user_id
     user.email = email
@@ -61,10 +61,13 @@ def _make_article_dict(article_id: int = 1, title: str = "Test Article") -> dict
 # _send_console
 # ---------------------------------------------------------------------------
 
+
 def test_send_console_returns_true(caplog):
     """Console provider always returns True."""
     sender = EmailSender(_make_settings("console"))
-    result = sender._send_console("user@test.com", "Subject", "<html><body>Hello</body></html>")
+    result = sender._send_console(
+        "user@test.com", "Subject", "<html><body>Hello</body></html>"
+    )
     assert result is True
 
 
@@ -72,7 +75,9 @@ def test_send_console_logs_email(caplog):
     """Console provider logs recipient and subject."""
     sender = EmailSender(_make_settings("console"))
     with caplog.at_level(logging.INFO):
-        sender._send_console("user@test.com", "My Subject", '<a href="http://link.com">Link</a>')
+        sender._send_console(
+            "user@test.com", "My Subject", '<a href="http://link.com">Link</a>'
+        )
 
     combined = " ".join(caplog.text.split())
     assert "CONSOLE EMAIL" in combined
@@ -93,6 +98,7 @@ def test_send_console_extracts_urls(caplog):
 # ---------------------------------------------------------------------------
 # render_digest
 # ---------------------------------------------------------------------------
+
 
 def test_render_digest_contains_article_title():
     """Rendered HTML includes the article title."""
@@ -139,7 +145,9 @@ def test_render_digest_with_research_and_explore():
     research = [_make_article_dict(article_id=2, title="Research Paper")]
     explore = [_make_article_dict(article_id=3, title="Explore Item")]
 
-    html = sender.render_digest(digest, main, user, research_articles=research, explore_articles=explore)
+    html = sender.render_digest(
+        digest, main, user, research_articles=research, explore_articles=explore
+    )
 
     assert "Main Article" in html
     assert "Research Paper" in html
@@ -229,6 +237,7 @@ def test_render_digest_merges_articles_and_research_articles_by_section():
 # send() with console provider
 # ---------------------------------------------------------------------------
 
+
 def test_send_with_console_provider_succeeds():
     """send() with console provider always returns True."""
     sender = EmailSender(_make_settings("console"))
@@ -240,13 +249,16 @@ def test_send_with_console_provider_succeeds():
 # send_verification_email
 # ---------------------------------------------------------------------------
 
+
 def test_send_verification_email_calls_send_with_correct_subject():
     """send_verification_email renders the template and calls send with the right subject."""
     sender = EmailSender(_make_settings("console"))
     user = _make_user()
 
     with patch.object(sender, "send", return_value=True) as mock_send:
-        result = sender.send_verification_email(user, "https://example.com/verify?token=abc")
+        result = sender.send_verification_email(
+            user, "https://example.com/verify?token=abc"
+        )
 
     assert result is True
     mock_send.assert_called_once()
@@ -260,13 +272,16 @@ def test_send_verification_email_calls_send_with_correct_subject():
 # send_password_reset_email
 # ---------------------------------------------------------------------------
 
+
 def test_send_password_reset_email_calls_send_with_correct_subject():
     """send_password_reset_email renders the template and calls send with the right subject."""
     sender = EmailSender(_make_settings("console"))
     user = _make_user()
 
     with patch.object(sender, "send", return_value=True) as mock_send:
-        result = sender.send_password_reset_email(user, "https://example.com/reset?token=xyz")
+        result = sender.send_password_reset_email(
+            user, "https://example.com/reset?token=xyz"
+        )
 
     assert result is True
     mock_send.assert_called_once()
@@ -279,12 +294,15 @@ def test_send_password_reset_email_calls_send_with_correct_subject():
 # send() retry logic with failing providers
 # ---------------------------------------------------------------------------
 
+
 def test_send_retries_on_failure_then_succeeds():
     """send() retries up to MAX_SEND_RETRIES; succeeds when a retry works."""
     sender = EmailSender(_make_settings("resend"))
 
-    with patch.object(sender, "_send_resend", side_effect=[False, True]) as mock_resend, \
-         patch("src.email_delivery.sender.time.sleep"):
+    with (
+        patch.object(sender, "_send_resend", side_effect=[False, True]) as mock_resend,
+        patch("src.email_delivery.sender.time.sleep"),
+    ):
         result = sender.send("u@t.com", "Sub", "<p>Hi</p>")
 
     assert result is True
@@ -295,8 +313,10 @@ def test_send_returns_false_after_all_retries_exhausted():
     """send() returns False after all retries fail."""
     sender = EmailSender(_make_settings("resend"))
 
-    with patch.object(sender, "_send_resend", return_value=False) as mock_resend, \
-         patch("src.email_delivery.sender.time.sleep"):
+    with (
+        patch.object(sender, "_send_resend", return_value=False) as mock_resend,
+        patch("src.email_delivery.sender.time.sleep"),
+    ):
         result = sender.send("u@t.com", "Sub", "<p>Hi</p>")
 
     assert result is False
