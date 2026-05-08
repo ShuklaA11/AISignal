@@ -5,8 +5,10 @@ import warnings
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings
+
+from src.sections import ALL_SECTIONS
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = PROJECT_ROOT / "config"
@@ -77,6 +79,18 @@ class ScheduleSettings(BaseModel):
 class RSSFeed(BaseModel):
     name: str
     url: str
+    section: str | None = None
+    audience_tags: list[str] = Field(default_factory=list)
+    quality_weight: float = 1.0
+
+    @field_validator("section")
+    @classmethod
+    def validate_section(cls, v: str | None) -> str | None:
+        if v is not None and v not in ALL_SECTIONS:
+            raise ValueError(
+                f"Invalid section '{v}'. Must be one of {ALL_SECTIONS} or null."
+            )
+        return v
 
 
 class Settings(BaseSettings):
@@ -132,6 +146,22 @@ class Settings(BaseSettings):
     role_defaults: dict[str, dict] = Field(
         default_factory=lambda: _yaml_config.get("role_defaults", {})
     )
+
+    # Per-role section weights (generalizable, no role bias hardcoded).
+    # Shape: { role_or_"default": { section: weight_float } }
+    # Any role missing falls back to the "default" entry, which itself
+    # defaults to all-1.0 (neutral) if not provided in config.
+    section_weights: dict[str, dict[str, float]] = Field(
+        default_factory=lambda: _yaml_config.get("section_weights", {})
+    )
+
+    def get_section_weights(self, role: str) -> dict[str, float]:
+        """Return the section weight map for a role, falling back to default
+        and finally to a neutral all-1.0 map. Always returns a complete map
+        covering every known section."""
+        neutral = {section: 1.0 for section in ALL_SECTIONS}
+        profile = self.section_weights.get(role) or self.section_weights.get("default") or {}
+        return {**neutral, **{k: v for k, v in profile.items() if k in ALL_SECTIONS}}
 
     # API keys loaded from environment / .env
     anthropic_api_key: str = ""
