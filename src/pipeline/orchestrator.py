@@ -144,8 +144,11 @@ def store_articles(session: Session, raw_articles: list[RawArticle], existing_fp
             published_at=raw.published_at,
             fetched_at=utcnow(),
             status="raw",
+            section=raw.section,
+            quality_weight=raw.quality_weight,
         )
         article.extra_metadata = raw.extra_metadata
+        article.audience_tags = raw.audience_tags
         session.add(article)
         new_count += 1
 
