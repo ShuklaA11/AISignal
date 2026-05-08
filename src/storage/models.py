@@ -76,6 +76,11 @@ class Article(SQLModel, table=True):
     status: str = Field(default="raw", index=True)
     extra_metadata_json: str = Field(default="{}")
 
+    # Section taxonomy (research | releases | builder | industry | learn)
+    section: Optional[str] = Field(default=None, index=True)
+    audience_tags_json: str = Field(default="[]")
+    quality_weight: float = Field(default=1.0)
+
     summaries: List["ArticleSummary"] = Relationship(back_populates="article")
     digest_links: List["DigestArticle"] = Relationship(back_populates="article")
 
@@ -102,6 +107,14 @@ class Article(SQLModel, table=True):
     @extra_metadata.setter
     def extra_metadata(self, value: dict) -> None:
         self.extra_metadata_json = json.dumps(value)
+
+    @property
+    def audience_tags(self) -> list[str]:
+        return json.loads(self.audience_tags_json)
+
+    @audience_tags.setter
+    def audience_tags(self, value: list[str]) -> None:
+        self.audience_tags_json = json.dumps(value)
 
 
 class ArticleSummary(SQLModel, table=True):
@@ -320,6 +333,19 @@ class Source(SQLModel, table=True):
     enabled: bool = Field(default=True)
     last_fetched_at: Optional[datetime] = None
     fetch_interval_minutes: int = Field(default=360)
+
+    # Section taxonomy (research | releases | builder | industry | learn)
+    section: Optional[str] = None
+    audience_tags_json: str = Field(default="[]")
+    quality_weight: float = Field(default=1.0)
+
+    @property
+    def audience_tags(self) -> list[str]:
+        return json.loads(self.audience_tags_json)
+
+    @audience_tags.setter
+    def audience_tags(self, value: list[str]) -> None:
+        self.audience_tags_json = json.dumps(value)
 
 
 class ScoringMetric(SQLModel, table=True):

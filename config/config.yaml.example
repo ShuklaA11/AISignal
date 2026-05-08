@@ -58,26 +58,156 @@ schedule:
 #   url: "sqlite:////absolute/path/to/db"
 
 # -- RSS Feeds ----------------------------------------------------------------
-# Each feed needs a unique name (used as source_name in the database) and URL.
-# Names starting with common prefixes (techcrunch, venturebeat, etc.) are
-# grouped under "rss" for source weight scoring.
+# Each feed has:
+#   name:           unique source_name in the database
+#   url:            RSS/Atom feed URL
+#   section:        one of: research | releases | builder | industry | learn
+#                   (null/omit if you want it ignored by the section system)
+#   audience_tags:  which user roles this source fits well
+#                   (free-form list; commonly: student, industry, enthusiast, researcher)
+#   quality_weight: per-source multiplier on base_importance (1.0 = neutral,
+#                   >1.0 boosts, <1.0 suppresses). Tune from observed CTR.
+#
+# URLs marked TODO need verification at runtime — feed format/path may shift.
 rss_feeds:
-  - name: "techcrunch_ai"
-    url: "https://techcrunch.com/category/artificial-intelligence/feed/"
-  - name: "venturebeat_ai"
-    url: "https://venturebeat.com/category/ai/feed/"
-  - name: "mit_tech_review_ai"
-    url: "https://www.technologyreview.com/topic/artificial-intelligence/feed/"
-  - name: "the_verge_ai"
-    url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+  # ------- Research (deep-dives, papers, mechanistic work) -------
+  - name: "lilian_weng"
+    url: "https://lilianweng.github.io/feed.xml"
+    section: "research"
+    audience_tags: ["researcher", "industry"]
+    quality_weight: 2.0
+  - name: "transformer_circuits"
+    url: "https://transformer-circuits.pub/feed.xml"  # TODO verify
+    section: "research"
+    audience_tags: ["researcher"]
+    quality_weight: 2.0
+  - name: "ahead_of_ai"
+    url: "https://magazine.sebastianraschka.com/feed"
+    section: "research"
+    audience_tags: ["researcher", "industry", "student"]
+    quality_weight: 1.8
+  - name: "jay_alammar"
+    url: "https://jalammar.github.io/feed.xml"
+    section: "research"
+    audience_tags: ["student", "industry"]
+    quality_weight: 1.5
+  - name: "the_gradient"
+    url: "https://thegradient.pub/rss/"
+    section: "research"
+    audience_tags: ["researcher", "student"]
+    quality_weight: 1.4
+
+  # ------- Releases (lab announcements, model launches) -------
   - name: "openai_blog"
     url: "https://openai.com/news/rss.xml"
+    section: "releases"
+    audience_tags: ["industry", "enthusiast", "researcher"]
+    quality_weight: 1.5
   - name: "deepmind_blog"
     url: "https://deepmind.google/blog/rss.xml"
+    section: "releases"
+    audience_tags: ["industry", "researcher"]
+    quality_weight: 1.5
   - name: "huggingface_blog"
     url: "https://huggingface.co/blog/feed.xml"
+    section: "releases"
+    audience_tags: ["industry", "researcher", "enthusiast"]
+    quality_weight: 1.3
   - name: "meta_ai_blog"
     url: "https://engineering.fb.com/category/ml-applications/feed/"
+    section: "releases"
+    audience_tags: ["industry", "researcher"]
+    quality_weight: 1.2
+  - name: "google_research"
+    url: "https://research.google/blog/rss/"  # TODO verify
+    section: "releases"
+    audience_tags: ["researcher", "industry"]
+    quality_weight: 1.3
+  - name: "microsoft_research"
+    url: "https://www.microsoft.com/en-us/research/feed/"
+    section: "releases"
+    audience_tags: ["researcher", "industry"]
+    quality_weight: 1.2
+  - name: "allen_ai"
+    url: "https://allenai.org/blog/feed.xml"  # TODO verify
+    section: "releases"
+    audience_tags: ["researcher"]
+    quality_weight: 1.4
+  - name: "mistral_blog"
+    url: "https://mistral.ai/news/feed.xml"  # TODO verify
+    section: "releases"
+    audience_tags: ["industry", "enthusiast"]
+    quality_weight: 1.2
+  - name: "cohere_blog"
+    url: "https://cohere.com/blog/rss.xml"  # TODO verify
+    section: "releases"
+    audience_tags: ["industry"]
+    quality_weight: 1.1
+  - name: "nvidia_research"
+    url: "https://blogs.nvidia.com/blog/category/deep-learning/feed/"
+    section: "releases"
+    audience_tags: ["industry", "researcher"]
+    quality_weight: 1.1
+
+  # ------- Builder (practitioner blogs, tools) -------
+  - name: "simon_willison"
+    url: "https://simonwillison.net/atom/everything/"
+    section: "builder"
+    audience_tags: ["industry", "enthusiast", "student"]
+    quality_weight: 2.0
+  - name: "eugene_yan"
+    url: "https://eugeneyan.com/rss/"
+    section: "builder"
+    audience_tags: ["industry"]
+    quality_weight: 1.7
+  - name: "hamel_husain"
+    url: "https://hamel.dev/index.xml"
+    section: "builder"
+    audience_tags: ["industry"]
+    quality_weight: 1.7
+  - name: "chip_huyen"
+    url: "https://huyenchip.com/feed.xml"
+    section: "builder"
+    audience_tags: ["industry", "researcher"]
+    quality_weight: 1.7
+  - name: "latent_space"
+    url: "https://www.latent.space/feed"
+    section: "builder"
+    audience_tags: ["industry", "enthusiast"]
+    quality_weight: 1.4
+
+  # ------- Industry (business, funding, products, strategy) -------
+  - name: "techcrunch_ai"
+    url: "https://techcrunch.com/category/artificial-intelligence/feed/"
+    section: "industry"
+    audience_tags: ["industry", "enthusiast"]
+    quality_weight: 0.9
+  - name: "mit_tech_review_ai"
+    url: "https://www.technologyreview.com/topic/artificial-intelligence/feed/"
+    section: "industry"
+    audience_tags: ["industry", "enthusiast", "student"]
+    quality_weight: 1.2
+  - name: "the_verge_ai"
+    url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+    section: "industry"
+    audience_tags: ["enthusiast", "industry"]
+    quality_weight: 0.9
+  - name: "import_ai"
+    url: "https://importai.substack.com/feed"
+    section: "industry"
+    audience_tags: ["industry", "researcher"]
+    quality_weight: 1.5
+  - name: "chinai_newsletter"
+    url: "https://chinai.substack.com/feed"
+    section: "industry"
+    audience_tags: ["industry", "researcher"]
+    quality_weight: 1.4
+
+# Sources to add later (need fetcher work, not RSS):
+#   - HF Daily Papers (Phase 2)
+#   - GitHub releases for curated repos (Phase 2)
+#   - YouTube transcripts: Karpathy, Yannic, 3Blue1Brown (Phase 5)
+#   - Dwarkesh Podcast transcripts (Phase 5)
 
 # -- arXiv ---------------------------------------------------------------------
 # categories: arXiv category codes to search (cs.AI, cs.CL, cs.CV, cs.LG)
@@ -139,6 +269,35 @@ topics:
     - "Tutorials"
   general:
     - "General AI"
+
+# -- Section Weights -----------------------------------------------------------
+# Per-role weighting across sections (research/releases/builder/industry/learn).
+# Generalizable: any role key is allowed; missing roles fall back to "default".
+# Defaults are NEUTRAL (all 1.0) — tune to taste. The code never hardcodes a
+# bias; deployments express their own audience profile here.
+#
+# Multiplied into the personalized score so a role's heavy sections rank higher
+# in their digest, light sections lower. Set to 0.0 to fully suppress a section
+# for a role.
+section_weights:
+  default:
+    research: 1.0
+    releases: 1.0
+    builder: 1.0
+    industry: 1.0
+    learn: 1.0
+  # Example role overrides — replace/extend with profiles you actually want.
+  # student:
+  #   learn: 1.5
+  #   industry: 1.2
+  #   research: 0.8
+  # industry:
+  #   builder: 1.4
+  #   releases: 1.3
+  #   industry: 1.2
+  # enthusiast:
+  #   releases: 1.3
+  #   industry: 1.1
 
 # -- Role Defaults -------------------------------------------------------------
 # Default topic selections and source weights for each user role.

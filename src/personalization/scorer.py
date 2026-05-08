@@ -127,7 +127,25 @@ def score_article_for_user(
     source_weight = source_prefs.get(source_key, SOURCE_WEIGHT_BASELINE)
     source_factor = _clamp_factor(source_weight / SOURCE_WEIGHT_BASELINE)
 
-    final_score = base * role_factor * topic_factor * level_factor * source_factor
+    # 5. Section weight (per-role weighting from config; neutral when section is None)
+    if article.section:
+        section_weight_map = load_settings().get_section_weights(user.role)
+        section_factor = _clamp_factor(section_weight_map.get(article.section, 1.0))
+    else:
+        section_factor = 1.0
+
+    # 6. Per-source quality weight (set in config; neutral default)
+    quality_factor = _clamp_factor(article.quality_weight)
+
+    final_score = (
+        base
+        * role_factor
+        * topic_factor
+        * level_factor
+        * source_factor
+        * section_factor
+        * quality_factor
+    )
     return round(min(final_score, MAX_SCORE), 2)
 
 

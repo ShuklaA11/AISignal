@@ -14,6 +14,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from src.config import Settings
+from src.sections import ALL_SECTIONS, SECTION_LABELS
 from src.storage.models import Article, ArticleSummary, Digest, DigestArticle, User
 from src.utils import mask_email as _mask_email
 from src.web.digest_token import sign_digest_click, sign_unsubscribe
@@ -129,10 +130,23 @@ class EmailSender:
         unsub_token = sign_unsubscribe(self.secret_key, user.id, user.email)
         unsub_url = f"{base_url}/unsubscribe?t={unsub_token}"
 
+        # Group all main-pool articles (news + research) by section.
+        # Order follows ALL_SECTIONS so the email layout is stable.
+        # Articles without a section land in an "other" bucket so legacy /
+        # mid-rollout data still renders.
+        merged = list(articles) + list(research_articles or [])
+        sectioned: list[tuple[str, str, list[dict]]] = []
+        for section_id in ALL_SECTIONS:
+            items = [a for a in merged if a.get("section") == section_id]
+            if items:
+                sectioned.append((section_id, SECTION_LABELS[section_id], items))
+        other_items = [a for a in merged if not a.get("section") or a["section"] not in ALL_SECTIONS]
+        if other_items:
+            sectioned.append(("other", "More", other_items))
+
         return template.render(
             digest=digest,
-            articles=articles,
-            research_articles=research_articles or [],
+            sectioned_articles=sectioned,
             explore_articles=explore_articles or [],
             user=user,
             date=digest.digest_date.strftime("%B %d, %Y"),
