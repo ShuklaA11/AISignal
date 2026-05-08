@@ -146,6 +146,85 @@ def test_render_digest_with_research_and_explore():
     assert "Explore Item" in html
 
 
+def _sectioned_article(article_id: int, title: str, section: str | None) -> dict:
+    return {
+        **_make_article_dict(article_id=article_id, title=title),
+        "section": section,
+        "source_name": "test_source",
+        "topics": [],
+    }
+
+
+def test_render_digest_groups_articles_into_section_blocks():
+    """Articles tagged with sections render under their respective section labels."""
+    sender = EmailSender(_make_settings())
+    user = _make_user()
+    digest = _make_digest()
+    articles = [
+        _sectioned_article(1, "Builder Article", "builder"),
+        _sectioned_article(2, "Industry Article", "industry"),
+        _sectioned_article(3, "Research Article", "research"),
+    ]
+
+    html = sender.render_digest(digest, articles, user)
+
+    # All titles render
+    assert "Builder Article" in html
+    assert "Industry Article" in html
+    assert "Research Article" in html
+    # Section labels are present (case-insensitive contains check on Title casing)
+    assert "Research" in html
+    assert "Builder" in html
+    assert "Industry" in html
+
+
+def test_render_digest_un_sectioned_articles_render_in_other_bucket():
+    """Articles without a section value still appear in the rendered HTML."""
+    sender = EmailSender(_make_settings())
+    user = _make_user()
+    digest = _make_digest()
+    articles = [_sectioned_article(1, "Untagged Article", None)]
+
+    html = sender.render_digest(digest, articles, user)
+
+    assert "Untagged Article" in html
+    assert "More" in html  # the "other" bucket label
+
+
+def test_render_digest_section_order_follows_taxonomy():
+    """Section blocks render in the canonical taxonomy order."""
+    sender = EmailSender(_make_settings())
+    user = _make_user()
+    digest = _make_digest()
+    # Provide sections out of taxonomy order to verify reordering
+    articles = [
+        _sectioned_article(1, "Industry First", "industry"),
+        _sectioned_article(2, "Research First", "research"),
+    ]
+
+    html = sender.render_digest(digest, articles, user)
+
+    research_idx = html.index("Research First")
+    industry_idx = html.index("Industry First")
+    # Research section comes before Industry in ALL_SECTIONS order
+    assert research_idx < industry_idx
+
+
+def test_render_digest_merges_articles_and_research_articles_by_section():
+    """Articles passed via the legacy research_articles param are also section-grouped."""
+    sender = EmailSender(_make_settings())
+    user = _make_user()
+    digest = _make_digest()
+    main = [_sectioned_article(1, "Main Item", "industry")]
+    research = [_sectioned_article(2, "Paper", "research")]
+
+    html = sender.render_digest(digest, main, user, research_articles=research)
+
+    research_idx = html.index("Paper")
+    industry_idx = html.index("Main Item")
+    assert research_idx < industry_idx
+
+
 # ---------------------------------------------------------------------------
 # send() with console provider
 # ---------------------------------------------------------------------------

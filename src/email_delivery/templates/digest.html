@@ -83,60 +83,19 @@
             <p>Welcome to your daily digest with The AI Signal. <span class="witty">{{ witty_remark }}</span></p>
         </div>
 
-        <!-- ═══ NEWS SECTION ═══ -->
-        {% if articles %}
-        <div class="section-label">&#128240; News &amp; Industry</div>
-
-        {% for item in articles %}
-        {% if loop.first %}
-        <div class="article-featured">
-            <div class="article-inner">
-                <span class="article-source">{{ item.source_name }}</span>
-                <a href="{{ click_url(item.id, 'news') }}" class="article-title">{{ item.title }}</a>
-                {% if item.summary %}
-                <p class="article-summary">{{ item.summary }}</p>
-                {% endif %}
-                {% if item.topics %}
-                <div class="article-topics">
-                    {% for topic in item.topics %}
-                    <span class="topic-tag">{{ topic }}</span>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        {% else %}
-        <div class="article">
-            <span class="article-source">{{ item.source_name }}</span>
-            <a href="{{ click_url(item.id, 'news') }}" class="article-title">
-                <span class="article-num">{{ loop.index }}</span>{{ item.title }}
-            </a>
-            {% if item.summary %}
-            <p class="article-summary">{{ item.summary }}</p>
-            {% endif %}
-            {% if item.topics %}
-            <div class="article-topics">
-                {% for topic in item.topics %}
-                <span class="topic-tag">{{ topic }}</span>
-                {% endfor %}
-            </div>
-            {% endif %}
-        </div>
-        {% endif %}
-        {% endfor %}
-        {% endif %}
-
-        <!-- ═══ PAPERS & REPOS SECTION ═══ -->
-        {% if research_articles %}
+        <!-- ═══ SECTIONED ARTICLE BLOCKS ═══ -->
+        {% for section_id, section_label, items in sectioned_articles %}
+        {% if not loop.first %}
         <div class="section-divider"><hr></div>
-        <div class="section-label">&#128218; Papers &amp; Repos</div>
+        {% endif %}
+        <div class="section-label">{{ section_label }}</div>
 
-        {% for item in research_articles %}
+        {% for item in items %}
         {% if loop.first %}
         <div class="article-featured">
             <div class="article-inner">
                 <span class="article-source">{{ item.source_name }}</span>
-                <a href="{{ click_url(item.id, 'research') }}" class="article-title">{{ item.title }}</a>
+                <a href="{{ click_url(item.id, section_id) }}" class="article-title">{{ item.title }}</a>
                 {% if item.summary %}
                 <p class="article-summary">{{ item.summary }}</p>
                 {% endif %}
@@ -152,7 +111,7 @@
         {% else %}
         <div class="article">
             <span class="article-source">{{ item.source_name }}</span>
-            <a href="{{ click_url(item.id, 'research') }}" class="article-title">
+            <a href="{{ click_url(item.id, section_id) }}" class="article-title">
                 <span class="article-num">{{ loop.index }}</span>{{ item.title }}
             </a>
             {% if item.summary %}
@@ -168,7 +127,7 @@
         </div>
         {% endif %}
         {% endfor %}
-        {% endif %}
+        {% endfor %}
 
         <!-- ═══ EXPLORE MORE SECTION ═══ -->
         {% if explore_articles %}

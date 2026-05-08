@@ -364,6 +364,7 @@ def _build_and_send_one(session, sender, user, manual: bool = False) -> str:
             "source_name": article.source_name,
             "summary": summary_map.get(article.id),
             "topics": article.topics,
+            "section": article.section,
         }
 
     news_data = [_link_to_dict(l) for l in news_links]
