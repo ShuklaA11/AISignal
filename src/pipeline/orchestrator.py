@@ -77,7 +77,15 @@ def build_fetchers(settings: Settings) -> list[BaseFetcher]:
     for feed in settings.rss_feeds:
         if feed.name == "anthropic_blog":
             continue
-        fetchers.append(RSSFetcher(name=feed.name, feed_url=feed.url))
+        fetchers.append(
+            RSSFetcher(
+                name=feed.name,
+                feed_url=feed.url,
+                section=feed.section,
+                audience_tags=feed.audience_tags,
+                quality_weight=feed.quality_weight,
+            )
+        )
 
     # Anthropic blog (no RSS feed — scrape /news page)
     fetchers.append(AnthropicBlogFetcher())
@@ -144,8 +152,11 @@ def store_articles(session: Session, raw_articles: list[RawArticle], existing_fp
             published_at=raw.published_at,
             fetched_at=utcnow(),
             status="raw",
+            section=raw.section,
+            quality_weight=raw.quality_weight,
         )
         article.extra_metadata = raw.extra_metadata
+        article.audience_tags = raw.audience_tags
         session.add(article)
         new_count += 1
 

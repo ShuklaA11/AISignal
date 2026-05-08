@@ -46,9 +46,19 @@ def _is_ai_relevant(title: str, content: str) -> bool:
 class RSSFetcher(BaseFetcher):
     """Fetches articles from an RSS/Atom feed URL using feedparser."""
 
-    def __init__(self, name: str, feed_url: str):
+    def __init__(
+        self,
+        name: str,
+        feed_url: str,
+        section: str | None = None,
+        audience_tags: list[str] | None = None,
+        quality_weight: float = 1.0,
+    ):
         self._name = name
         self.feed_url = feed_url
+        self.section = section
+        self.audience_tags = list(audience_tags or [])
+        self.quality_weight = quality_weight
 
     @property
     def source_name(self) -> str:
@@ -111,6 +121,9 @@ class RSSFetcher(BaseFetcher):
                     source_name=self._name,
                     source_type="rss",
                     extra_metadata={"tags": tags},
+                    section=self.section,
+                    audience_tags=list(self.audience_tags),
+                    quality_weight=self.quality_weight,
                 )
             )
         return articles

@@ -67,6 +67,13 @@ dev = [
 [project.scripts]
 aisignal = "src.web.app:app"
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+    "unit: fast unit tests with no external dependencies",
+    "integration: tests that exercise multiple modules or hit a real DB",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
 

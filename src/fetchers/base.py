@@ -25,6 +25,13 @@ class RawArticle:
     source_type: str = ""  # rss | api | scrape
     extra_metadata: dict = field(default_factory=dict)
 
+    # Section taxonomy fields. Fetchers populate these so the section/quality
+    # signal is set at ingestion time and flows through scoring + rendering.
+    # See src/sections.py for valid section values.
+    section: str | None = None
+    audience_tags: list[str] = field(default_factory=list)
+    quality_weight: float = 1.0
+
     @property
     def content_hash(self) -> str:
         """SHA256 of normalized title + URL for deduplication."""

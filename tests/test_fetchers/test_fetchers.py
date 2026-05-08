@@ -208,6 +208,45 @@ class TestRSSFetcher:
         assert len(result) == 0
 
     @pytest.mark.asyncio
+    async def test_propagates_section_tags_to_articles(self):
+        """Section/audience_tags/quality_weight set on RSSFetcher land on each RawArticle."""
+        from src.fetchers.rss import RSSFetcher
+
+        entries = [self._make_entry("LLM advance", "An AI breakthrough...")]
+        feed = self._make_feed(entries)
+
+        with patch("feedparser.parse", return_value=feed):
+            fetcher = RSSFetcher(
+                "openai_blog",
+                "https://feed.example.com",
+                section="releases",
+                audience_tags=["industry", "researcher"],
+                quality_weight=1.5,
+            )
+            result = await fetcher.fetch()
+
+        assert len(result) == 1
+        assert result[0].section == "releases"
+        assert result[0].audience_tags == ["industry", "researcher"]
+        assert result[0].quality_weight == 1.5
+
+    @pytest.mark.asyncio
+    async def test_defaults_when_no_section_provided(self):
+        """Backward compat: fetcher with no section info returns neutral defaults."""
+        from src.fetchers.rss import RSSFetcher
+
+        entries = [self._make_entry("AI thing", "A learning model...")]
+        feed = self._make_feed(entries)
+
+        with patch("feedparser.parse", return_value=feed):
+            fetcher = RSSFetcher("openai_blog", "https://feed.example.com")
+            result = await fetcher.fetch()
+
+        assert result[0].section is None
+        assert result[0].audience_tags == []
+        assert result[0].quality_weight == 1.0
+
+    @pytest.mark.asyncio
     async def test_handles_bozo_feed_with_no_entries(self):
         from src.fetchers.rss import RSSFetcher
 
