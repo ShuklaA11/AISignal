@@ -77,7 +77,15 @@ def build_fetchers(settings: Settings) -> list[BaseFetcher]:
     for feed in settings.rss_feeds:
         if feed.name == "anthropic_blog":
             continue
-        fetchers.append(RSSFetcher(name=feed.name, feed_url=feed.url))
+        fetchers.append(
+            RSSFetcher(
+                name=feed.name,
+                feed_url=feed.url,
+                section=feed.section,
+                audience_tags=feed.audience_tags,
+                quality_weight=feed.quality_weight,
+            )
+        )
 
     # Anthropic blog (no RSS feed — scrape /news page)
     fetchers.append(AnthropicBlogFetcher())
