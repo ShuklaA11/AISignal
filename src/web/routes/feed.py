@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Optional
+
+from sqlalchemy import or_
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
@@ -43,6 +46,13 @@ SOURCE_GROUPS = {
 GROUP_NAMES = list(SOURCE_GROUPS.keys())
 DEFAULT_GROUP = "RSS News"
 ARTICLES_PER_PAGE = 30
+
+# Hide articles published more than RECENT_DAYS days ago. RSS feeds often
+# expose full historical archives (some go back years), so without this
+# cutoff the feed surfaces ancient posts whenever new content is sparse.
+# Articles with no published_at are kept — they're typically recent fetches
+# from sources that don't expose a publish date.
+RECENT_DAYS = 90
 
 
 _DEFAULT_TOPICS = [
@@ -167,6 +177,12 @@ def _query_articles(
 
     if section and section != "all":
         stmt = stmt.where(Article.section == section)
+
+    # Drop ancient posts — RSS archives can reach back years
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=RECENT_DAYS)
+    stmt = stmt.where(
+        or_(Article.published_at >= cutoff, Article.published_at.is_(None))
+    )
 
     stmt = stmt.order_by(Article.published_at.desc().nulls_last()).limit(200)
     articles = list(session.exec(stmt).all())
