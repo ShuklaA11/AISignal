@@ -140,6 +140,7 @@ from src.web.routes.analytics import router as analytics_router
 from src.web.routes.api import router as api_router
 from src.web.routes.auth import router as auth_router
 from src.web.routes.feed import router as feed_router
+from src.web.routes.rankings import router as rankings_router
 from src.web.routes.onboarding import router as onboarding_router
 from src.web.routes.profile import router as profile_router
 from src.web.routes.review import router as review_router
@@ -147,6 +148,7 @@ from src.web.routes.review import router as review_router
 app.include_router(auth_router)
 app.include_router(onboarding_router)
 app.include_router(feed_router)
+app.include_router(rankings_router)
 app.include_router(review_router)
 app.include_router(profile_router)
 app.include_router(analytics_router)

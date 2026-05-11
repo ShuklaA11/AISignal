@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Model Rankings — The AI Signal{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+    <div class="mb-8">
+        <h1 class="font-heading text-3xl font-bold text-forest mb-2">Model Rankings</h1>
+        <p class="text-forest/60 text-sm">
+            Live snapshots from public leaderboards. Updated daily.
+        </p>
+    </div>
+
+    {% if not has_data %}
+    <div class="bg-white rounded-lg p-12 border border-forest/10 text-center">
+        <h2 class="font-heading text-xl font-semibold text-forest mb-2">No snapshots yet</h2>
+        <p class="text-forest/60 text-sm">
+            The daily snapshot job runs at 05:00 UTC. To trigger one manually:
+        </p>
+        <pre class="mt-4 inline-block bg-forest/5 px-4 py-2 rounded text-xs font-mono text-forest">python scripts/run_snapshot.py</pre>
+    </div>
+    {% else %}
+
+    <!-- Movers section -->
+    {% if movers %}
+    <div class="mb-10">
+        <h2 class="font-heading text-xl font-semibold text-forest mb-4 flex items-center gap-2">
+            <span>📊</span> Top movers this week
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for group in movers %}
+            <div class="bg-white rounded-lg border border-forest/10 p-4">
+                <div class="text-xs font-heading font-semibold uppercase tracking-wider text-forest/60 mb-3">
+                    {{ group.provider }} &middot; {{ group.metric }}
+                </div>
+                <ul class="space-y-2">
+                    {% for item in group.entries %}
+                    <li class="flex items-center justify-between text-sm">
+                        <span class="font-medium text-forest truncate pr-2">{{ item.model }}</span>
+                        <span class="flex items-center gap-2 shrink-0">
+                            {% if item.direction == 'up' %}
+                            <span class="text-emerald-700 font-bold">↑{{ item.rank_delta | abs }}</span>
+                            {% else %}
+                            <span class="text-red-700 font-bold">↓{{ item.rank_delta | abs }}</span>
+                            {% endif %}
+                            <span class="text-forest/50">#{{ item.rank_now }}</span>
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Per-board tables -->
+    <h2 class="font-heading text-xl font-semibold text-forest mb-4">Current leaderboards</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {% for board in boards %}
+        <div class="bg-white rounded-lg border border-forest/10 overflow-hidden">
+            <div class="px-5 py-4 border-b border-forest/10 bg-forest/5">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-heading font-semibold text-forest">
+                            {{ board.provider_label }}
+                        </div>
+                        <div class="text-xs text-forest/50 mt-0.5">
+                            {{ board.metric_label }} &middot; as of {{ board.captured_at }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <table class="w-full text-sm">
+                <thead class="text-xs uppercase text-forest/50 bg-forest/5">
+                    <tr>
+                        <th class="px-5 py-2 text-left w-10">#</th>
+                        <th class="px-5 py-2 text-left">Model</th>
+                        <th class="px-5 py-2 text-left">Org</th>
+                        <th class="px-5 py-2 text-right">Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in board.rows %}
+                    <tr class="border-t border-forest/5">
+                        <td class="px-5 py-2 font-mono text-forest/40">{{ row.rank }}</td>
+                        <td class="px-5 py-2 font-medium text-forest">{{ row.model }}</td>
+                        <td class="px-5 py-2 text-forest/60">{{ row.organization or "—" }}</td>
+                        <td class="px-5 py-2 text-right font-mono text-forest">{{ row.score }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -99,9 +99,26 @@
 
     <!-- Main Content -->
     <div class="flex-1 min-w-0">
-        <!-- Hidden inputs to track active group and sort (included in all HTMX filter requests) -->
+        <!-- Hidden inputs to track active group, sort, section (included in all HTMX filter requests) -->
         <input type="hidden" name="group" value="{{ active_group }}" class="feed-filter" id="active-group">
         <input type="hidden" name="sort" value="{{ active_sort }}" class="feed-filter" id="active-sort">
+        <input type="hidden" name="section" value="{{ active_section }}" class="feed-filter" id="active-section">
+
+        <!-- Section Tabs (primary nav: All + 5 reading-intent sections) -->
+        <div id="section-tabs" class="flex flex-wrap gap-2 mb-4">
+            <a href="/feed?section=all{% if active_group %}&group={{ active_group }}{% endif %}"
+                class="section-tab px-3 py-1.5 rounded-full text-xs font-heading font-semibold transition
+                    {% if active_section == 'all' %}bg-forest text-cream{% else %}bg-white text-forest/70 border border-forest/10 hover:bg-forest/5{% endif %}">
+                All
+            </a>
+            {% for sid in all_sections %}
+            <a href="/feed?section={{ sid }}{% if active_group %}&group={{ active_group }}{% endif %}"
+                class="section-tab px-3 py-1.5 rounded-full text-xs font-heading font-semibold transition
+                    {% if active_section == sid %}bg-forest text-cream{% else %}bg-white text-forest/70 border border-forest/10 hover:bg-forest/5{% endif %}">
+                {{ section_labels[sid] }}
+            </a>
+            {% endfor %}
+        </div>
 
         <!-- Group Tabs + Sort Dropdown row -->
         <div class="flex items-center justify-between mb-6">

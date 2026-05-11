@@ -136,6 +136,7 @@ def _query_articles(
     user=None,
     sort="for_you",
     read_ids=None,
+    section=None,
 ):
     """Query up to 200 articles for a source group, with optional sidebar filters and personalization.
 
@@ -163,6 +164,9 @@ def _query_articles(
 
     if levels:
         stmt = stmt.where(Article.difficulty_level.in_(levels))
+
+    if section and section != "all":
+        stmt = stmt.where(Article.section == section)
 
     stmt = stmt.order_by(Article.published_at.desc().nulls_last()).limit(200)
     articles = list(session.exec(stmt).all())
@@ -218,12 +222,19 @@ async def feed_page(
     request: Request,
     group: Optional[str] = None,
     sort: Optional[str] = None,
+    section: Optional[str] = None,
     page: int = 1,
 ):
-    """Public feed page with group tabs, sort toggle, and filter sidebar."""
+    """Public feed page with section tabs, group tabs, sort toggle, and filter sidebar."""
+    from src.sections import ALL_SECTIONS
+
     active_group = group or DEFAULT_GROUP
     if active_group not in SOURCE_GROUPS:
         active_group = DEFAULT_GROUP
+
+    active_section = (section or "all").lower()
+    if active_section != "all" and active_section not in ALL_SECTIONS:
+        active_section = "all"
 
     with session_scope() as session:
         user = None
@@ -243,6 +254,7 @@ async def feed_page(
             user=user,
             sort=active_sort,
             read_ids=read_ids,
+            section=active_section,
         )
 
         # Paginate
@@ -258,6 +270,8 @@ async def feed_page(
         role = user.role if user else "enthusiast"
         summaries_map = _load_summaries(session, articles, role=role)
 
+        from src.sections import ALL_SECTIONS, SECTION_LABELS
+
         return templates.TemplateResponse(
             "feed.html",
             {
@@ -270,6 +284,9 @@ async def feed_page(
                 "group_names": GROUP_NAMES,
                 "active_group": active_group,
                 "active_sort": active_sort,
+                "active_section": active_section,
+                "all_sections": ALL_SECTIONS,
+                "section_labels": SECTION_LABELS,
                 "saved_ids": saved_ids,
                 "summaries_map": summaries_map,
                 "page": page,
@@ -291,12 +308,19 @@ async def feed_articles_filter(
     level: Optional[list[str]] = Query(None),
     topic: Optional[list[str]] = Query(None),
     source: Optional[list[str]] = Query(None),
+    section: Optional[str] = Query(None),
     page: int = Query(1),
 ):
     """HTMX endpoint: returns filtered article HTML partial."""
+    from src.sections import ALL_SECTIONS
+
     active_group = group or DEFAULT_GROUP
     if active_group not in SOURCE_GROUPS:
         active_group = DEFAULT_GROUP
+
+    active_section = (section or "all").lower()
+    if active_section != "all" and active_section not in ALL_SECTIONS:
+        active_section = "all"
 
     with session_scope() as session:
         user = None
@@ -316,6 +340,7 @@ async def feed_articles_filter(
             user=user,
             sort=active_sort,
             read_ids=read_ids,
+            section=active_section,
         )
 
         # Paginate
