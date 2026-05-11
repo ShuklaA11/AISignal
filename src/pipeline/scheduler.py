@@ -244,6 +244,15 @@ def setup_scheduler(settings: Settings) -> SimpleScheduler:
     )
     scheduler.add_daily_job(_run_token_cleanup, hour=4, minute=0, name="token_cleanup")
 
+    # Daily leaderboard snapshots — early morning UTC, before the digest send,
+    # so the digest can include "top movers" based on the previous snapshot.
+    scheduler.add_daily_job(
+        _run_leaderboard_snapshots,
+        hour=5,
+        minute=0,
+        name="leaderboard_snapshots",
+    )
+
     # Daily digest send
     scheduler.add_daily_job(
         _run_send_digests,
@@ -387,6 +396,15 @@ async def _run_token_cleanup():
             _log(f"token_cleanup: cleaned {count} expired tokens")
 
 
+async def _run_leaderboard_snapshots():
+    from src.leaderboards import run_all_snapshots
+    from src.storage.database import session_scope
+
+    with session_scope() as session:
+        written = await run_all_snapshots(session)
+        _log(f"leaderboard_snapshots: wrote {written} snapshot(s)")
+
+
 def _build_and_send_one(session, sender, user, manual: bool = False) -> str:
     """Build and send a digest for a single user. Returns 'sent', 'failed', or 'skipped'."""
     from sqlmodel import select
@@ -454,12 +472,16 @@ def _build_and_send_one(session, sender, user, manual: bool = False) -> str:
     research_data = [_link_to_dict(l) for l in research_links]
     explore_data = [_link_to_dict(l) for l in explore_links]
 
+    from src.leaderboards.digest_helpers import build_movers
+    movers = build_movers(session)
+
     html = sender.render_digest(
         digest,
         news_data,
         user,
         research_articles=research_data,
         explore_articles=explore_data,
+        movers=movers,
     )
     success = sender.send(
         to_email=user.email,

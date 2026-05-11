@@ -49,6 +49,18 @@
         /* Explore section */
         .explore-divider { padding: 24px 32px 0; }
         .explore-divider hr { border: none; border-top: 2px dashed #9EFFBF; margin: 0; }
+
+        /* Leaderboard movers */
+        .movers-header { padding: 18px 32px 4px; }
+        .movers-header h3 { margin: 0; font-size: 14px; font-weight: 700; color: #1A3C2B; }
+        .movers-header p { margin: 4px 0 0; font-size: 12px; color: #1A3C2B; opacity: 0.5; }
+        .movers-group { padding: 8px 32px 14px; }
+        .movers-group-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #1A3C2B; opacity: 0.55; margin: 6px 0 4px; }
+        .mover-row { padding: 6px 0; font-size: 13px; color: #1A3C2B; border-bottom: 1px solid #f3f3f3; }
+        .mover-row:last-child { border-bottom: none; }
+        .mover-model { font-weight: 600; }
+        .mover-up { color: #1f8a3c; font-weight: 700; }
+        .mover-down { color: #b03030; font-weight: 700; }
         .explore-header { padding: 16px 32px 8px; }
         .explore-header h3 { margin: 0; font-size: 14px; font-weight: 700; color: #1A3C2B; }
         .explore-header p { margin: 4px 0 0; font-size: 12px; color: #1A3C2B; opacity: 0.4; }
@@ -128,6 +140,31 @@
         {% endif %}
         {% endfor %}
         {% endfor %}
+
+        <!-- ═══ LEADERBOARD MOVERS ═══ -->
+        {% if movers %}
+        <div class="section-divider"><hr></div>
+        <div class="movers-header">
+            <h3>&#128202; Model rankings — top movers</h3>
+            <p>Rank changes since the previous snapshot</p>
+        </div>
+        {% for group in movers %}
+        <div class="movers-group">
+            <div class="movers-group-title">{{ group.provider }} &middot; {{ group.metric }}</div>
+            {% for item in group.entries %}
+            <div class="mover-row">
+                <span class="mover-model">{{ item.model }}</span>
+                {% if item.direction == 'up' %}
+                <span class="mover-up">&#8593; {{ item.rank_delta | abs }}</span>
+                {% else %}
+                <span class="mover-down">&#8595; {{ item.rank_delta | abs }}</span>
+                {% endif %}
+                &mdash; now #{{ item.rank_now }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        {% endif %}
 
         <!-- ═══ EXPLORE MORE SECTION ═══ -->
         {% if explore_articles %}

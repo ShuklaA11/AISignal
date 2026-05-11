@@ -68,8 +68,10 @@ def main():
                     "score": link.personalized_score,
                 })
 
-            # Render and send
-            html = sender.render_digest(digest, articles_data, user)
+            # Render and send (with leaderboard movers if any snapshots exist)
+            from src.leaderboards.digest_helpers import build_movers
+            movers = build_movers(session)
+            html = sender.render_digest(digest, articles_data, user, movers=movers)
             success = sender.send(
                 to_email=user.email,
                 subject=digest.subject_line or f"AI Digest",

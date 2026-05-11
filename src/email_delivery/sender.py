@@ -117,6 +117,7 @@ class EmailSender:
         user: User,
         research_articles: list[dict] | None = None,
         explore_articles: list[dict] | None = None,
+        movers: list[dict] | None = None,
     ) -> str:
         template = self.jinja_env.get_template("digest.html")
         base_url = (
@@ -163,6 +164,7 @@ class EmailSender:
             digest=digest,
             sectioned_articles=sectioned,
             explore_articles=explore_articles or [],
+            movers=movers or [],
             user=user,
             date=digest.digest_date.strftime("%B %d, %Y"),
             base_url=base_url,
