@@ -220,6 +220,39 @@ arxiv:
     - "cs.LG"
   max_results: 100
 
+# -- GitHub Releases -----------------------------------------------------------
+# Curated list of AI/ML tooling repos to poll for new releases. Each release
+# (excluding drafts and prereleases) becomes an article in the Builder section.
+# Unauthenticated rate limit: 60 req/hr — plenty for ~15 repos. For larger
+# lists, set GITHUB_TOKEN in the environment.
+#
+# lookback_days: only emit releases newer than this (default 30)
+# per_repo: max releases pulled per repo per fetch (default 5)
+github_releases:
+  lookback_days: 30
+  per_repo: 5
+  repos:
+    # Inference + serving
+    - "vllm-project/vllm"
+    - "ggml-org/llama.cpp"
+    - "ollama/ollama"
+    - "huggingface/text-generation-inference"
+    # Frameworks + libraries
+    - "huggingface/transformers"
+    - "langchain-ai/langchain"
+    - "stanfordnlp/dspy"
+    - "jxnl/instructor"
+    - "BerriAI/litellm"
+    # Agents + tooling
+    - "microsoft/autogen"
+    - "crewAIInc/crewAI"
+    - "Significant-Gravitas/AutoGPT"
+    # Vector / RAG
+    - "chroma-core/chroma"
+    - "qdrant/qdrant"
+    # Apple silicon / local
+    - "ml-explore/mlx"
+
 # -- Reddit --------------------------------------------------------------------
 # Requires NEWSLETTER_REDDIT_CLIENT_ID and NEWSLETTER_REDDIT_CLIENT_SECRET
 # subreddits: list of subreddit names (without r/ prefix)

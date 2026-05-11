@@ -10,6 +10,7 @@ from src.config import Settings, load_settings
 from src.fetchers.anthropic_blog import AnthropicBlogFetcher
 from src.fetchers.arxiv_fetcher import ArxivFetcher
 from src.fetchers.base import BaseFetcher, RawArticle
+from src.fetchers.github_releases import GitHubReleasesFetcher
 from src.fetchers.github_trending import GitHubTrendingFetcher
 from src.fetchers.huggingface import HuggingFaceFetcher
 from src.fetchers.reddit import RedditFetcher
@@ -127,6 +128,16 @@ def build_fetchers(settings: Settings) -> list[BaseFetcher]:
 
     # GitHub Trending (scrapes github.com/trending, filters for AI repos)
     fetchers.append(GitHubTrendingFetcher())
+
+    # GitHub Releases for curated AI/ML tooling repos
+    if settings.github_releases_repos:
+        fetchers.append(
+            GitHubReleasesFetcher(
+                repos=settings.github_releases_repos,
+                lookback_days=settings.github_releases_lookback_days,
+                releases_per_repo=settings.github_releases_per_repo,
+            )
+        )
 
     # Reddit (requires API keys)
     if settings.reddit_client_id and settings.reddit_client_secret:

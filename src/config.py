@@ -144,6 +144,20 @@ class Settings(BaseSettings):
         default_factory=lambda: _yaml_config.get("arxiv", {}).get("max_results", 50)
     )
 
+    github_releases_repos: list[str] = Field(
+        default_factory=lambda: _yaml_config.get("github_releases", {}).get("repos", [])
+    )
+    github_releases_lookback_days: int = Field(
+        default_factory=lambda: _yaml_config.get("github_releases", {}).get(
+            "lookback_days", 30
+        )
+    )
+    github_releases_per_repo: int = Field(
+        default_factory=lambda: _yaml_config.get("github_releases", {}).get(
+            "per_repo", 5
+        )
+    )
+
     reddit_subreddits: list[str] = Field(
         default_factory=lambda: _yaml_config.get("reddit", {}).get("subreddits", [])
     )
