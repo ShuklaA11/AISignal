@@ -13,9 +13,10 @@ logger = logging.getLogger(__name__)
 # Suppress litellm's verbose logging
 litellm.suppress_debug_info = True
 
-# Timeout per LLM call (seconds). Qwen 4B should respond in <60s for a 5-article batch.
-# 120s gives headroom without blocking the pipeline for 5 minutes on a hung connection.
-DEFAULT_TIMEOUT = 120
+# Timeout per LLM call (seconds). 5-article batches on a small local model
+# (e.g. Qwen 4B via Ollama) can take 5+ minutes per batch on consumer hardware.
+# 600s lets local LLMs finish a batch while still cutting off truly hung calls.
+DEFAULT_TIMEOUT = 600
 
 # Ollama health-check endpoint
 OLLAMA_BASE_URL = "http://localhost:11434"

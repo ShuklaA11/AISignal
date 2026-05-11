@@ -58,11 +58,13 @@ def main():
                 summary = session.exec(summary_stmt).first()
 
                 articles_data.append({
+                    "id": article.id,
                     "title": article.title,
                     "url": article.url,
                     "source_name": article.source_name,
                     "summary": summary.summary_text if summary else None,
                     "topics": article.topics,
+                    "section": article.section,
                     "score": link.personalized_score,
                 })
 
