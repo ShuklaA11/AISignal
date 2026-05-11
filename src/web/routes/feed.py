@@ -155,19 +155,26 @@ def _query_articles(
     Both compute match % when user is logged in.
     """
     group = group or DEFAULT_GROUP
-    query_sources = SOURCE_GROUPS.get(group, SOURCE_GROUPS[DEFAULT_GROUP])
 
-    # If individual source filters are active, intersect with group sources
-    if sources:
-        query_sources = [s for s in query_sources if s in sources]
-        if not query_sources:
-            return []
-
-    stmt = (
-        select(Article)
-        .where(Article.status.in_(["processed", "approved", "sent"]))
-        .where(Article.source_name.in_(query_sources))
+    stmt = select(Article).where(
+        Article.status.in_(["processed", "approved", "sent"])
     )
+
+    # Section-first behavior: when a specific section is active, it's the
+    # primary filter — don't constrain by the legacy SOURCE_GROUPS list
+    # (which predates Phase 1.2's expanded source catalog and excludes most
+    # of our tagged sources). When section is "all" or unset, fall back to
+    # the historical group-based filter so the default /feed view works.
+    if section and section != "all":
+        if sources:
+            stmt = stmt.where(Article.source_name.in_(sources))
+    else:
+        query_sources = SOURCE_GROUPS.get(group, SOURCE_GROUPS[DEFAULT_GROUP])
+        if sources:
+            query_sources = [s for s in query_sources if s in sources]
+            if not query_sources:
+                return []
+        stmt = stmt.where(Article.source_name.in_(query_sources))
 
     if read_ids:
         stmt = stmt.where(Article.id.not_in(read_ids))
