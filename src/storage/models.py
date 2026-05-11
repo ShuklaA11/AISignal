@@ -394,6 +394,34 @@ class DigestClick(SQLModel, table=True):
     section: str = Field(default="main")  # "main" or "explore"
 
 
+class LeaderboardSnapshot(SQLModel, table=True):
+    """A point-in-time leaderboard ranking from one provider, one metric.
+
+    Each provider (LMSYS Arena, Artificial Analysis, etc.) emits one row
+    per captured metric per snapshot. The full ranking list lives in
+    rankings_json as a list of {model, organization, rank, score} dicts
+    so we can store heterogeneous schemas without per-provider tables.
+    """
+
+    __tablename__ = "leaderboard_snapshots"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    provider: str = Field(index=True)
+    metric: str = Field(index=True)
+    captured_at: datetime = Field(default_factory=utcnow, index=True)
+    rankings_json: str = Field(default="[]")
+    source_url: Optional[str] = None
+    notes: Optional[str] = None
+
+    @property
+    def rankings(self) -> list[dict]:
+        return json.loads(self.rankings_json)
+
+    @rankings.setter
+    def rankings(self, value: list[dict]) -> None:
+        self.rankings_json = json.dumps(value)
+
+
 class Token(SQLModel, table=True):
     """One-time-use token for email verification and password reset."""
 
