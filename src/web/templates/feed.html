@@ -66,32 +66,33 @@
                 </div>
             </div>
 
-            <!-- Sources Filter (dynamic per active group) -->
+            <!-- Sources Filter (dynamic per active section) -->
             <div class="corner-marker p-4 bg-white rounded">
                 <h3 class="font-heading font-semibold text-forest text-sm mb-3 flex items-center gap-2">
                     <iconify-icon icon="lucide:rss" class="text-coral"></iconify-icon>
                     Sources
+                    {% if active_section and active_section != 'all' %}
+                    <span class="text-xs text-forest/40 font-normal ml-1">in {{ section_labels[active_section] }}</span>
+                    {% endif %}
                 </h3>
-                <div id="sources-filter">
-                    {% for group_name, group_sources in source_groups.items() %}
-                    <div class="source-group-list space-y-2" data-group="{{ group_name }}"
-                         {% if group_name != active_group %}style="display:none"{% endif %}>
-                        {% for src in group_sources %}
-                        <label class="flex items-center gap-3 cursor-pointer group">
-                            <input type="checkbox" name="source" value="{{ src }}"
-                                class="signal-checkbox feed-filter source-cb"
-                                data-group="{{ group_name }}"
-                                hx-get="/api/feed/articles"
-                                hx-trigger="change"
-                                hx-include=".feed-filter"
-                                hx-target="#feed-content"
-                                hx-swap="innerHTML"
-                                hx-indicator="#feed-loading">
-                            <span class="text-sm text-forest/70 group-hover:text-forest transition">{{ src | replace("_", " ") | title }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
+                <div id="sources-filter" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {% if available_sources %}
+                    {% for src in available_sources %}
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" name="source" value="{{ src }}"
+                            class="signal-checkbox feed-filter source-cb"
+                            hx-get="/api/feed/articles"
+                            hx-trigger="change"
+                            hx-include=".feed-filter"
+                            hx-target="#feed-content"
+                            hx-swap="innerHTML"
+                            hx-indicator="#feed-loading">
+                        <span class="text-sm text-forest/70 group-hover:text-forest transition">{{ src | replace("_", " ") | title }}</span>
+                    </label>
                     {% endfor %}
+                    {% else %}
+                    <p class="text-xs text-forest/40">No sources in this section yet.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -99,50 +100,28 @@
 
     <!-- Main Content -->
     <div class="flex-1 min-w-0">
-        <!-- Hidden inputs to track active group, sort, section (included in all HTMX filter requests) -->
-        <input type="hidden" name="group" value="{{ active_group }}" class="feed-filter" id="active-group">
+        <!-- Hidden inputs to track sort + section (included in all HTMX filter requests) -->
         <input type="hidden" name="sort" value="{{ active_sort }}" class="feed-filter" id="active-sort">
         <input type="hidden" name="section" value="{{ active_section }}" class="feed-filter" id="active-section">
 
         <!-- Section Tabs (primary nav: All + 5 reading-intent sections) -->
-        <div id="section-tabs" class="flex flex-wrap gap-2 mb-4">
-            <a href="/feed?section=all{% if active_group %}&group={{ active_group }}{% endif %}"
-                class="section-tab px-3 py-1.5 rounded-full text-xs font-heading font-semibold transition
+        <div id="section-tabs" class="flex flex-wrap gap-2 mb-6">
+            <a href="/feed?section=all"
+                class="section-tab px-4 py-2 rounded-full text-sm font-heading font-semibold transition
                     {% if active_section == 'all' %}bg-forest text-cream{% else %}bg-white text-forest/70 border border-forest/10 hover:bg-forest/5{% endif %}">
                 All
             </a>
             {% for sid in all_sections %}
-            <a href="/feed?section={{ sid }}{% if active_group %}&group={{ active_group }}{% endif %}"
-                class="section-tab px-3 py-1.5 rounded-full text-xs font-heading font-semibold transition
+            <a href="/feed?section={{ sid }}"
+                class="section-tab px-4 py-2 rounded-full text-sm font-heading font-semibold transition
                     {% if active_section == sid %}bg-forest text-cream{% else %}bg-white text-forest/70 border border-forest/10 hover:bg-forest/5{% endif %}">
                 {{ section_labels[sid] }}
             </a>
             {% endfor %}
         </div>
 
-        <!-- Group Tabs + Sort Dropdown row -->
-        <div class="flex items-center justify-between mb-6">
-            <!-- Group Tabs (left) -->
-            <div id="group-tabs" class="flex flex-wrap gap-2">
-                {% for gname in group_names %}
-                <button
-                    onclick="selectGroup('{{ gname }}')"
-                    class="group-tab px-4 py-2 rounded-full text-sm font-heading font-semibold transition
-                        {% if gname == active_group %}
-                            bg-forest text-cream
-                        {% else %}
-                            bg-white text-forest/70 border border-forest/10 hover:bg-forest/5
-                        {% endif %}"
-                    data-group="{{ gname }}">
-                    {% if gname == 'RSS News' %}
-                    <iconify-icon icon="lucide:rss" class="mr-1 align-middle"></iconify-icon>
-                    {% elif 'Research' in gname %}
-                    <iconify-icon icon="lucide:flask-conical" class="mr-1 align-middle"></iconify-icon>
-                    {% endif %}
-                    {{ gname }}
-                </button>
-                {% endfor %}
-            </div>
+        <!-- Sort Dropdown row -->
+        <div class="flex items-center justify-end mb-6">
 
             {% if user is defined and user %}
             <!-- Sort Dropdown (right) -->
@@ -246,51 +225,12 @@ document.addEventListener('click', function(e) {
     }
 });
 
-function selectGroup(name) {
-    // Update hidden input
-    document.getElementById('active-group').value = name;
-
-    // Update tab styling
-    document.querySelectorAll('.group-tab').forEach(btn => {
-        if (btn.dataset.group === name) {
-            btn.className = btn.className
-                .replace('bg-white text-forest/70 border border-forest/10 hover:bg-forest/5', '')
-                .replace('bg-forest text-cream', '')
-                + ' bg-forest text-cream';
-        } else {
-            btn.className = btn.className
-                .replace('bg-forest text-cream', '')
-                .replace('bg-white text-forest/70 border border-forest/10 hover:bg-forest/5', '')
-                + ' bg-white text-forest/70 border border-forest/10 hover:bg-forest/5';
-        }
-    });
-
-    // Show only sources for the active group, uncheck others
-    document.querySelectorAll('.source-group-list').forEach(div => {
-        if (div.dataset.group === name) {
-            div.style.display = '';
-        } else {
-            div.style.display = 'none';
-            // Uncheck hidden sources so they don't affect the query
-            div.querySelectorAll('.source-cb').forEach(cb => { cb.checked = false; });
-        }
-    });
-
-    // Trigger HTMX fetch with all filters
-    htmx.ajax('GET', getFilterUrl(), {
-        target: '#feed-content',
-        swap: 'innerHTML',
-    });
-}
-
 function getFilterUrl() {
     const params = new URLSearchParams();
-    params.set('group', document.getElementById('active-group').value);
-    // Include sort param if the toggle exists (user is logged in)
+    const sectionInput = document.getElementById('active-section');
+    if (sectionInput) params.set('section', sectionInput.value);
     const sortInput = document.getElementById('active-sort');
-    if (sortInput) {
-        params.set('sort', sortInput.value);
-    }
+    if (sortInput) params.set('sort', sortInput.value);
     document.querySelectorAll('.signal-checkbox.feed-filter:checked').forEach(cb => {
         params.append(cb.name, cb.value);
     });
@@ -298,17 +238,18 @@ function getFilterUrl() {
 }
 
 function clearFilters() {
-    // Uncheck all checkboxes
     document.querySelectorAll('.signal-checkbox.feed-filter').forEach(cb => {
         cb.checked = false;
     });
-    // Reset sort to "for_you" if the dropdown exists (user is logged in)
     const sortInput = document.getElementById('active-sort');
     if (sortInput) {
         selectSort('for_you');
+    } else {
+        htmx.ajax('GET', getFilterUrl(), {
+            target: '#feed-content',
+            swap: 'innerHTML',
+        });
     }
-    // Reset to default group (this triggers the single HTMX fetch)
-    selectGroup('RSS News');
 }
 </script>
 

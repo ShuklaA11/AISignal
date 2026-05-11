@@ -139,7 +139,6 @@ def _score_articles(session, articles, user):
 
 def _query_articles(
     session,
-    group=None,
     levels=None,
     topics=None,
     sources=None,
@@ -154,27 +153,15 @@ def _query_articles(
     sort="recent"  — keep chronological order
     Both compute match % when user is logged in.
     """
-    group = group or DEFAULT_GROUP
-
     stmt = select(Article).where(
         Article.status.in_(["processed", "approved", "sent"])
     )
 
-    # Section-first behavior: when a specific section is active, it's the
-    # primary filter — don't constrain by the legacy SOURCE_GROUPS list
-    # (which predates Phase 1.2's expanded source catalog and excludes most
-    # of our tagged sources). When section is "all" or unset, fall back to
-    # the historical group-based filter so the default /feed view works.
-    if section and section != "all":
-        if sources:
-            stmt = stmt.where(Article.source_name.in_(sources))
-    else:
-        query_sources = SOURCE_GROUPS.get(group, SOURCE_GROUPS[DEFAULT_GROUP])
-        if sources:
-            query_sources = [s for s in query_sources if s in sources]
-            if not query_sources:
-                return []
-        stmt = stmt.where(Article.source_name.in_(query_sources))
+    # Section is the primary filter; legacy SOURCE_GROUPS is gone. When the
+    # user picks specific sources in the sidebar, those further narrow the
+    # active section (or "all").
+    if sources:
+        stmt = stmt.where(Article.source_name.in_(sources))
 
     if read_ids:
         stmt = stmt.where(Article.id.not_in(read_ids))
@@ -218,6 +205,26 @@ def _query_articles(
     return articles
 
 
+def _sources_for_section(session, section: str) -> list[str]:
+    """Distinct source_names of recently-published, processed articles in a section.
+
+    When section == "all", returns sources across every section. Excludes
+    posts older than RECENT_DAYS to keep the sidebar focused on live data.
+    """
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=RECENT_DAYS)
+    stmt = (
+        select(Article.source_name)
+        .where(Article.status.in_(["processed", "approved", "sent"]))
+        .where(
+            or_(Article.published_at >= cutoff, Article.published_at.is_(None))
+        )
+        .distinct()
+    )
+    if section and section != "all":
+        stmt = stmt.where(Article.section == section)
+    return sorted(s for s in session.exec(stmt).all() if s)
+
+
 def _load_summaries(session, articles, role: str = "enthusiast") -> dict[int, str]:
     """Bulk-load the best summary for each article matching the user's role.
 
@@ -243,17 +250,12 @@ def _load_summaries(session, articles, role: str = "enthusiast") -> dict[int, st
 )
 async def feed_page(
     request: Request,
-    group: Optional[str] = None,
     sort: Optional[str] = None,
     section: Optional[str] = None,
     page: int = 1,
 ):
-    """Public feed page with section tabs, group tabs, sort toggle, and filter sidebar."""
+    """Public feed page with section tabs, sort toggle, and filter sidebar."""
     from src.sections import ALL_SECTIONS
-
-    active_group = group or DEFAULT_GROUP
-    if active_group not in SOURCE_GROUPS:
-        active_group = DEFAULT_GROUP
 
     active_section = (section or "all").lower()
     if active_section != "all" and active_section not in ALL_SECTIONS:
@@ -273,12 +275,13 @@ async def feed_page(
         read_ids = get_read_article_ids(session, user.id) if user else set()
         all_articles = _query_articles(
             session,
-            group=active_group,
             user=user,
             sort=active_sort,
             read_ids=read_ids,
             section=active_section,
         )
+
+        available_sources = _sources_for_section(session, active_section)
 
         # Paginate
         page = max(1, page)
@@ -303,9 +306,7 @@ async def feed_page(
                 "articles": articles,
                 "total_count": total_count,
                 "all_topics": all_topics,
-                "source_groups": SOURCE_GROUPS,
-                "group_names": GROUP_NAMES,
-                "active_group": active_group,
+                "available_sources": available_sources,
                 "active_sort": active_sort,
                 "active_section": active_section,
                 "all_sections": ALL_SECTIONS,
@@ -326,7 +327,6 @@ async def feed_page(
 )
 async def feed_articles_filter(
     request: Request,
-    group: Optional[str] = Query(None),
     sort: Optional[str] = Query(None),
     level: Optional[list[str]] = Query(None),
     topic: Optional[list[str]] = Query(None),
@@ -336,10 +336,6 @@ async def feed_articles_filter(
 ):
     """HTMX endpoint: returns filtered article HTML partial."""
     from src.sections import ALL_SECTIONS
-
-    active_group = group or DEFAULT_GROUP
-    if active_group not in SOURCE_GROUPS:
-        active_group = DEFAULT_GROUP
 
     active_section = (section or "all").lower()
     if active_section != "all" and active_section not in ALL_SECTIONS:
@@ -356,7 +352,6 @@ async def feed_articles_filter(
 
         all_articles = _query_articles(
             session,
-            group=active_group,
             levels=level,
             topics=topic,
             sources=source,
