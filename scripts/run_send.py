@@ -36,7 +36,7 @@ def main():
 
         for user in users:
             # Build personalized digest
-            digest = build_digest_for_user(session, user)
+            digest = build_digest_for_user(session, user, manual=True)
 
             # Get digest articles with summaries
             stmt = (
