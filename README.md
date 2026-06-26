@@ -232,7 +232,7 @@ mxbai-embed-large                      128-dim feature vector
                     [0.3, 2.0]
 ```
 
-**Article tower**: Each article is embedded using `mxbai-embed-large` (1024-dim) via Ollama. Input is `"{title} | {summary}"` — using the enthusiast-level LLM summary when available, falling back to the first 500 chars of raw content. Embeddings are pre-computed in batch and stored as float32 blobs.
+**Article tower**: Each article is embedded using `mxbai-embed-large` (1024-dim) via Ollama. Input is `"{title} | {summary}"` - using the enthusiast-level LLM summary when available, falling back to the first 500 chars of raw content. Embeddings are pre-computed in batch and stored as float32 blobs.
 
 **User tower**: A lightweight 3-layer MLP trained per-user via contrastive learning (CosineEmbeddingLoss, margin=0.2). The 128-dim input feature vector is constructed from:
 
