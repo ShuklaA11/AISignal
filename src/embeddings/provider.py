@@ -1,13 +1,21 @@
-"""Embedding generation via Ollama through LiteLLM."""
+"""Embedding generation through LiteLLM.
+
+Defaults to local Ollama; set NEWSLETTER_EMBEDDING_MODEL to route to a hosted
+provider (e.g. "deepinfra/mixedbread-ai/mxbai-embed-large-v1"). LiteLLM reads
+the provider's API key from its own env var (e.g. DEEPINFRA_API_KEY).
+"""
 
 import logging
+import os
 
 import litellm
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
-EMBEDDING_MODEL = "ollama/mxbai-embed-large"
+EMBEDDING_MODEL = os.environ.get(
+    "NEWSLETTER_EMBEDDING_MODEL", "ollama/mxbai-embed-large"
+)
 EMBEDDING_DIM = 1024
 
 

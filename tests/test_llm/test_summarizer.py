@@ -104,8 +104,14 @@ class TestParseBatchResponse:
         result = parse_batch_response("this is not json at all", expected_count=1)
         assert result == []
 
-    def test_returns_empty_for_non_array_json(self):
+    def test_wraps_single_object_in_list(self):
+        """A lone JSON object (e.g. Ollama format='json' batch-of-1) is wrapped."""
         result = parse_batch_response('{"key": "value"}', expected_count=1)
+        assert result == [{"key": "value"}]
+
+    def test_returns_empty_for_scalar_json(self):
+        """JSON that is neither an array nor an object is rejected."""
+        result = parse_batch_response("42", expected_count=1)
         assert result == []
 
     def test_returns_empty_for_empty_string(self):

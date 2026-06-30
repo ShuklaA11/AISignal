@@ -88,7 +88,7 @@ def test_send_console_extracts_urls(caplog):
     """Console provider extracts and logs href URLs from the HTML body."""
     sender = EmailSender(_make_settings("console"))
     html = '<a href="http://one.com">1</a> <a href="http://two.com">2</a>'
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         sender._send_console("u@t.com", "S", html)
 
     assert "http://one.com" in caplog.text

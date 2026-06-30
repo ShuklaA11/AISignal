@@ -1,0 +1,94 @@
+name: Daily Digest
+
+# Runs the full pipeline (fetch -> process -> embed -> send) on a schedule,
+# entirely off your laptop. State lives in a single SQLite file kept in
+# Cloudflare R2 between runs (download at start, upload at end).
+#
+# GitHub's scheduled runs are best-effort and often fire 5-15 min late,
+# especially on the hour, so we start off-the-hour and a bit early.
+on:
+  schedule:
+    - cron: "50 14 * * *" # ~14:50 UTC; lands the digest near 09:00 CST
+  workflow_dispatch: {} # adds a "Run workflow" button for manual/test runs
+
+# Never let two pipeline runs overlap — they would race on the shared DB file.
+concurrency:
+  group: daily-digest
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # --- cloud providers (override the local Ollama defaults) ---
+      NEWSLETTER_LLM__PROVIDER: anthropic
+      NEWSLETTER_LLM__MODEL: claude-haiku-4-5-20251001
+      NEWSLETTER_EMBEDDING_MODEL: deepinfra/mixedbread-ai/mxbai-embed-large-v1
+
+      # --- secrets (set under Settings > Secrets and variables > Actions) ---
+      NEWSLETTER_SECRET_KEY: ${{ secrets.NEWSLETTER_SECRET_KEY }}
+      NEWSLETTER_ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DEEPINFRA_API_KEY: ${{ secrets.DEEPINFRA_API_KEY }}
+
+      # --- email (Gmail SMTP) ---
+      NEWSLETTER_EMAIL__PROVIDER: gmail
+      NEWSLETTER_EMAIL__FROM_ADDRESS: ${{ secrets.EMAIL_FROM_ADDRESS }}
+      NEWSLETTER_EMAIL__SMTP_USERNAME: ${{ secrets.GMAIL_USERNAME }}
+      NEWSLETTER_EMAIL__SMTP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+
+      # --- Cloudflare R2 (S3-compatible; used by the aws CLI below) ---
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      # R2 rejects aws-cli v2's default request checksums; only send when required.
+      AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+      AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      # config.yaml is gitignored; the tracked .example holds the real feeds,
+      # topics, sections, and weights. Provider/keys/email come from env above.
+      - name: Materialize config
+        run: cp config/config.yaml.example config/config.yaml
+
+      # Pull the live DB. Fails loudly if the object is missing — that means
+      # you haven't seeded R2 yet (see setup checklist), and we must NOT start
+      # from an empty DB and clobber your history.
+      - name: Download DB from R2
+        run: |
+          mkdir -p data
+          aws s3 cp "s3://$R2_BUCKET/newsletter.db" data/newsletter.db \
+            --endpoint-url "$R2_ENDPOINT"
+
+      - name: Fetch articles
+        run: python scripts/run_fetch.py
+
+      - name: Process (LLM summaries)
+        run: python scripts/run_process.py
+
+      - name: Generate embeddings
+        run: python scripts/run_embeddings.py
+
+      - name: Send digest
+        run: python scripts/run_send.py
+
+      # Persist state even if an earlier step failed, so partial progress
+      # (e.g. fetched + processed but send errored) isn't redone next run.
+      - name: Upload DB to R2
+        if: always()
+        run: |
+          aws s3 cp data/newsletter.db "s3://$R2_BUCKET/newsletter.db" \
+            --endpoint-url "$R2_ENDPOINT"

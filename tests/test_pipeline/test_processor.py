@@ -237,6 +237,7 @@ class TestRunProcessing:
                 "src.pipeline.processor.process_articles_batch", new_callable=AsyncMock
             ) as mock_batch,
         ):
+            mock_llm_cls.return_value.health_check = AsyncMock(return_value=True)
             mock_batch.return_value = llm_results
 
             # Wire session_scope to use our engine
@@ -269,9 +270,11 @@ class TestRunProcessing:
 
         with (
             patch("src.pipeline.processor.init_db"),
-            patch("src.pipeline.processor.LLMProvider"),
+            patch("src.pipeline.processor.LLMProvider") as mock_llm_cls,
             patch("src.pipeline.processor.session_scope") as mock_scope,
         ):
+            mock_llm_cls.return_value.health_check = AsyncMock(return_value=True)
+
             from contextlib import contextmanager
 
             @contextmanager
@@ -297,13 +300,14 @@ class TestRunProcessing:
 
         with (
             patch("src.pipeline.processor.init_db"),
-            patch("src.pipeline.processor.LLMProvider"),
+            patch("src.pipeline.processor.LLMProvider") as mock_llm_cls,
             patch("src.pipeline.processor.session_scope") as mock_scope,
             patch(
                 "src.pipeline.processor.process_articles_batch", new_callable=AsyncMock
             ) as mock_batch,
             patch("src.pipeline.processor.asyncio.sleep", new_callable=AsyncMock),
         ):
+            mock_llm_cls.return_value.health_check = AsyncMock(return_value=True)
             mock_batch.side_effect = Exception("LLM unavailable")
 
             from contextlib import contextmanager
