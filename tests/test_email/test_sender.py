@@ -112,8 +112,10 @@ def test_render_digest_contains_article_title():
     assert "Transformers Are All You Need" in html
 
 
-def test_render_digest_contains_click_url():
-    """Rendered HTML includes signed click tracking URLs."""
+def test_render_digest_links_directly_to_article():
+    """Article links point straight at the source URL. The click-tracking
+    redirect (/api/digest/click) is bypassed because the digest is delivered
+    without a live public web server to serve it."""
     sender = EmailSender(_make_settings())
     user = _make_user()
     digest = _make_digest()
@@ -121,7 +123,8 @@ def test_render_digest_contains_click_url():
 
     html = sender.render_digest(digest, articles, user)
 
-    assert "/api/digest/click?t=" in html
+    assert "https://example.com/article/1" in html
+    assert "/api/digest/click?t=" not in html
 
 
 def test_render_digest_contains_unsubscribe_link():

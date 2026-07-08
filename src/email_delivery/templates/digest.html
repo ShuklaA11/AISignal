@@ -107,7 +107,7 @@
         <div class="article-featured">
             <div class="article-inner">
                 <span class="article-source">{{ item.source_name }}</span>
-                <a href="{{ click_url(item.id, section_id) }}" class="article-title">{{ item.title }}</a>
+                <a href="{{ item.url }}" class="article-title">{{ item.title }}</a>
                 {% if item.summary %}
                 <p class="article-summary">{{ item.summary }}</p>
                 {% endif %}
@@ -123,7 +123,7 @@
         {% else %}
         <div class="article">
             <span class="article-source">{{ item.source_name }}</span>
-            <a href="{{ click_url(item.id, section_id) }}" class="article-title">
+            <a href="{{ item.url }}" class="article-title">
                 <span class="article-num">{{ loop.index }}</span>{{ item.title }}
             </a>
             {% if item.summary %}
@@ -177,7 +177,7 @@
         {% for item in explore_articles %}
         <div class="article-explore">
             <span class="article-source">{{ item.source_name }}</span>
-            <a href="{{ click_url(item.id, 'explore') }}" class="article-title">{{ item.title }}</a>
+            <a href="{{ item.url }}" class="article-title">{{ item.title }}</a>
             {% if item.summary %}
             <p class="article-summary">{{ item.summary }}</p>
             {% endif %}
