@@ -70,6 +70,7 @@ def _make_llm_result(index=0):
         "summary_student": "Student summary text.",
         "summary_industry": "Industry summary text.",
         "summary_enthusiast": "Enthusiast summary text.",
+        "why_it_matters": "Agents can now click real UIs without a scraping layer.",
     }
 
 
@@ -136,6 +137,30 @@ class TestApplyResultToArticle:
         assert article.category is None
         assert article.base_importance_score is None
         assert article.status == "processed"
+
+    def test_applies_why_it_matters(self, session):
+        article = _make_article(session)
+        _apply_result_to_article(article, _make_llm_result())
+        assert (
+            article.why_it_matters
+            == "Agents can now click real UIs without a scraping layer."
+        )
+
+    def test_missing_why_it_matters_is_none(self, session):
+        """Older prompts / partial LLM output must not break processing."""
+        article = _make_article(session)
+        result = _make_llm_result()
+        del result["why_it_matters"]
+        _apply_result_to_article(article, result)
+        assert article.why_it_matters is None
+
+    def test_blank_why_it_matters_is_none(self, session):
+        """Whitespace-only output normalizes to None so the template can fall back."""
+        article = _make_article(session)
+        result = _make_llm_result()
+        result["why_it_matters"] = "   "
+        _apply_result_to_article(article, result)
+        assert article.why_it_matters is None
 
 
 # ---------------------------------------------------------------------------

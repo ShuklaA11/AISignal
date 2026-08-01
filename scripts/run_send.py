@@ -7,13 +7,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from sqlmodel import select
+
 from src.config import load_settings
 from src.email_delivery.sender import EmailSender
 from src.personalization.digest_builder import build_digest_for_user
 from src.storage.database import get_session, init_db
 from src.storage.models import ArticleSummary, DigestArticle
 from src.storage.queries import get_active_users
-from sqlmodel import select
 
 logging.basicConfig(
     level=logging.INFO,
@@ -57,19 +58,23 @@ def main():
                 )
                 summary = session.exec(summary_stmt).first()
 
-                articles_data.append({
-                    "id": article.id,
-                    "title": article.title,
-                    "url": article.url,
-                    "source_name": article.source_name,
-                    "summary": summary.summary_text if summary else None,
-                    "topics": article.topics,
-                    "section": article.section,
-                    "score": link.personalized_score,
-                })
+                articles_data.append(
+                    {
+                        "id": article.id,
+                        "title": article.title,
+                        "url": article.url,
+                        "source_name": article.source_name,
+                        "summary": summary.summary_text if summary else None,
+                        "why_it_matters": article.why_it_matters,
+                        "topics": article.topics,
+                        "section": article.section,
+                        "score": link.personalized_score,
+                    }
+                )
 
             # Render and send (with leaderboard movers if any snapshots exist)
             from src.leaderboards.digest_helpers import build_movers
+
             movers = build_movers(session)
             html = sender.render_digest(digest, articles_data, user, movers=movers)
             success = sender.send(
@@ -81,6 +86,7 @@ def main():
             if success:
                 digest.status = "sent"
                 from datetime import datetime
+
                 digest.sent_at = datetime.utcnow()
                 session.add(digest)
                 session.commit()

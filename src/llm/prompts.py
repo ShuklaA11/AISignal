@@ -40,6 +40,10 @@ BATCH_PROCESS_PROMPT = """Analyze the following {count} articles about AI/ML. Fo
 6. **summary_industry**: A business-focused summary (2-3 sentences) aimed at industry professionals. Highlight practical impact, market implications.
 7. **summary_enthusiast**: An accessible summary (2-3 sentences) aimed at AI enthusiasts. Explain concepts simply, highlight what's exciting.
 8. **key_entities**: List of key entities mentioned (people, companies, models, datasets).
+9. **why_it_matters**: ONE sentence, 25 words maximum, stating the consequence — what changes for
+   people building with or affected by AI. Not a restatement of what the article says. No hedging
+   ("could potentially"), no filler ("this is significant"). If nothing actually changes, say what
+   it signals instead.
 
 Respond with a JSON array. Each element must have these exact keys:
 - "index" (int, 0-based matching the article order below)
@@ -51,6 +55,7 @@ Respond with a JSON array. Each element must have these exact keys:
 - "summary_industry" (string)
 - "summary_enthusiast" (string)
 - "key_entities" (array of strings)
+- "why_it_matters" (string)
 
 ARTICLES:
 {articles}

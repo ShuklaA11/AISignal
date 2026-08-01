@@ -464,6 +464,7 @@ def _build_and_send_one(session, sender, user, manual: bool = False) -> str:
             "url": article.url,
             "source_name": article.source_name,
             "summary": summary_map.get(article.id),
+            "why_it_matters": article.why_it_matters,
             "topics": article.topics,
             "section": article.section,
         }
@@ -473,6 +474,7 @@ def _build_and_send_one(session, sender, user, manual: bool = False) -> str:
     explore_data = [_link_to_dict(l) for l in explore_links]
 
     from src.leaderboards.digest_helpers import build_movers
+
     movers = build_movers(session)
 
     html = sender.render_digest(

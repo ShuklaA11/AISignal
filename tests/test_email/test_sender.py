@@ -221,6 +221,102 @@ def test_render_digest_section_order_follows_taxonomy():
     assert research_idx < industry_idx
 
 
+def _why_article(
+    article_id: int,
+    title: str,
+    section: str = "industry",
+    why: str | None = None,
+    summary: str = "The full role summary text.",
+) -> dict:
+    return {
+        **_make_article_dict(article_id=article_id, title=title),
+        "section": section,
+        "source_name": "test_source",
+        "topics": [],
+        "summary": summary,
+        "why_it_matters": why,
+    }
+
+
+def test_render_digest_shows_why_it_matters_line():
+    """The one-line verdict renders when present."""
+    sender = EmailSender(_make_settings())
+    articles = [_why_article(1, "Item", why="Agents can now click real UIs.")]
+
+    html = sender.render_digest(_make_digest(), articles, _make_user())
+
+    assert "Agents can now click real UIs." in html
+
+
+def test_render_digest_featured_item_keeps_summary_and_why():
+    """The first item in a section keeps its full summary alongside the why line."""
+    sender = EmailSender(_make_settings())
+    articles = [
+        _why_article(
+            1, "Featured", why="Consequence line.", summary="Featured full summary."
+        )
+    ]
+
+    html = sender.render_digest(_make_digest(), articles, _make_user())
+
+    assert "Featured full summary." in html
+    assert "Consequence line." in html
+
+
+def test_render_digest_non_featured_item_drops_summary_when_why_present():
+    """Substitutive layout: non-featured items show the why line instead of the summary."""
+    sender = EmailSender(_make_settings())
+    articles = [
+        _why_article(1, "Featured", why="First why.", summary="Featured summary."),
+        _why_article(2, "Second", why="Second why.", summary="DROPPED SUMMARY TEXT."),
+    ]
+
+    html = sender.render_digest(_make_digest(), articles, _make_user())
+
+    assert "Second why." in html
+    assert "DROPPED SUMMARY TEXT." not in html
+
+
+def test_render_digest_non_featured_item_falls_back_to_summary():
+    """Articles processed before why_it_matters existed still render their summary."""
+    sender = EmailSender(_make_settings())
+    articles = [
+        _why_article(1, "Featured", why="First why.", summary="Featured summary."),
+        _why_article(2, "Legacy", why=None, summary="LEGACY SUMMARY TEXT."),
+    ]
+
+    html = sender.render_digest(_make_digest(), articles, _make_user())
+
+    assert "LEGACY SUMMARY TEXT." in html
+
+
+def test_render_digest_truncates_overlong_why_line():
+    """A runaway generation cannot blow up the layout."""
+    sender = EmailSender(_make_settings())
+    runaway = "word " * 100
+    articles = [_why_article(1, "Item", why=runaway)]
+
+    html = sender.render_digest(_make_digest(), articles, _make_user())
+
+    assert runaway.strip() not in html
+    assert "..." in html
+
+
+def test_render_digest_explore_item_uses_why_line():
+    """Explore picks follow the same substitutive rule."""
+    sender = EmailSender(_make_settings())
+    explore = [
+        _why_article(9, "Explore Item", why="Explore why.", summary="EXPLORE SUMMARY.")
+    ]
+
+    html = sender.render_digest(
+        _make_digest(), [], _make_user(), explore_articles=explore
+    )
+
+    assert "Explore why." in html
+    assert "EXPLORE SUMMARY." not in html
+
+
 def test_render_digest_merges_articles_and_research_articles_by_section():
     """Articles passed via the legacy research_articles param are also section-grouped."""
     sender = EmailSender(_make_settings())

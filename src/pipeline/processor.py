@@ -42,6 +42,7 @@ def _apply_result_to_article(article: Article, result: dict) -> None:
     article.difficulty_level = result.get("difficulty_level")
     article.topics_json = json.dumps(_validate_topics(result.get("topics", [])))
     article.key_entities_json = json.dumps(result.get("key_entities", []))
+    article.why_it_matters = (result.get("why_it_matters") or "").strip() or None
     article.status = "processed"
 
 

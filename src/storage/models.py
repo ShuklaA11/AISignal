@@ -75,6 +75,9 @@ class Article(SQLModel, table=True):
     topics_json: str = Field(default="[]")
     difficulty_level: Optional[str] = None
     key_entities_json: str = Field(default="[]")
+    # One-sentence "why this matters" line shown in the digest. Null on
+    # articles processed before this field existed — callers must fall back.
+    why_it_matters: Optional[str] = None
     status: str = Field(default="raw", index=True)
     extra_metadata_json: str = Field(default="{}")
 
