@@ -113,7 +113,7 @@
                 <span class="article-source">{{ item.source_name }}</span>
                 <a href="{{ item.url }}" class="article-title">{{ item.title }}</a>
                 {% if item.why_it_matters %}
-                <p class="article-why">{{ item.why_it_matters | truncate(140, True) }}</p>
+                <p class="article-why">{{ item.why_it_matters | truncate(180, True) }}</p>
                 {% endif %}
                 {% if item.summary %}
                 <p class="article-summary">{{ item.summary }}</p>
@@ -136,7 +136,7 @@
                 <span class="article-num">{{ loop.index }}</span>{{ item.title }}
             </a>
             {% if item.why_it_matters %}
-            <p class="article-why">{{ item.why_it_matters | truncate(140, True) }}</p>
+            <p class="article-why">{{ item.why_it_matters | truncate(180, True) }}</p>
             {% elif item.summary %}
             <p class="article-summary">{{ item.summary }}</p>
             {% endif %}
@@ -183,7 +183,7 @@
             <span class="article-source">{{ item.source_name }}</span>
             <a href="{{ item.url }}" class="article-title">{{ item.title }}</a>
             {% if item.why_it_matters %}
-            <p class="article-why">{{ item.why_it_matters | truncate(140, True) }}</p>
+            <p class="article-why">{{ item.why_it_matters | truncate(180, True) }}</p>
             {% elif item.summary %}
             <p class="article-summary">{{ item.summary }}</p>
             {% endif %}
