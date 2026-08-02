@@ -39,6 +39,37 @@ def build_batch_prompt(articles: list[Article]) -> str:
     )
 
 
+def _scan_json_objects(text: str) -> list[dict[str, Any]]:
+    """Extract top-level JSON objects from a response that isn't valid JSON.
+
+    Small local models drift out of the requested array format — qwen3.5:4b
+    echoes the prompt's ``[0] Title:`` labelling and emits
+    ``[0] {...} [1] {...}`` instead of ``[{...}, {...}]``. Scanning for
+    decodable objects recovers the batch instead of discarding it.
+
+    Advancing past each successfully decoded object means dicts nested inside
+    a recovered object are never picked up as entries of their own.
+    """
+    decoder = json.JSONDecoder()
+    objects: list[dict[str, Any]] = []
+    index = 0
+
+    while index < len(text):
+        start = text.find("{", index)
+        if start == -1:
+            break
+        try:
+            obj, end = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            index = start + 1
+            continue
+        if isinstance(obj, dict):
+            objects.append(obj)
+        index = end
+
+    return objects
+
+
 def parse_batch_response(
     raw_response: str, expected_count: int
 ) -> list[dict[str, Any]]:
@@ -54,8 +85,14 @@ def parse_batch_response(
     try:
         results = json.loads(text)
     except json.JSONDecodeError:
-        logger.error(f"Failed to parse LLM response as JSON: {text[:200]}...")
-        return []
+        results = _scan_json_objects(text)
+        if not results:
+            logger.error(f"Failed to parse LLM response as JSON: {text[:200]}...")
+            return []
+        logger.warning(
+            f"LLM response was not valid JSON; recovered {len(results)} object(s) "
+            f"by scanning. The model is drifting from the requested array format."
+        )
 
     if isinstance(results, dict):
         # Some models (e.g. Ollama with format="json") return a single object
@@ -66,6 +103,14 @@ def parse_batch_response(
     if not isinstance(results, list):
         logger.error("LLM response is not a JSON array or object")
         return []
+
+    if len(results) < expected_count:
+        # Shortfalls are silent data loss: the caller leaves those articles
+        # 'raw' with no error, so the only trace is this line.
+        logger.warning(
+            f"LLM returned {len(results)} result(s) for a batch of {expected_count}; "
+            f"{expected_count - len(results)} article(s) will not be processed."
+        )
 
     return results
 

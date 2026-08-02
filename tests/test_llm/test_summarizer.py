@@ -8,6 +8,7 @@ Covers:
 """
 
 import json
+import logging
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -136,6 +137,61 @@ class TestParseBatchResponse:
         raw = "```json\n" + json.dumps(data, indent=2) + "\n```"
         result = parse_batch_response(raw, expected_count=1)
         assert result[0]["topics"] == ["NLP"]
+
+    def test_recovers_index_labelled_objects(self):
+        """qwen3.5:4b echoes the prompt's `[0] Title:` format and emits
+        index-labelled objects instead of a JSON array. Recover them rather
+        than dropping the whole batch."""
+        raw = (
+            '[0]\n{\n  "index": 0,\n  "category": "research"\n}\n'
+            '[1]\n{\n  "index": 1,\n  "category": "product"\n}\n'
+        )
+        result = parse_batch_response(raw, expected_count=2)
+        assert len(result) == 2
+        assert result[0]["category"] == "research"
+        assert result[1]["index"] == 1
+
+    def test_recovers_objects_on_same_line_as_label(self):
+        """Same drift, without the newline between label and object."""
+        raw = '[0] {"index": 0, "category": "research"} [1] {"index": 1}'
+        result = parse_batch_response(raw, expected_count=2)
+        assert len(result) == 2
+
+    def test_recovery_preserves_all_fields(self):
+        raw = (
+            '[0]\n{"index": 0, "topics": ["NLP"], '
+            '"why_it_matters": "Cuts inference cost for small deployments."}'
+        )
+        result = parse_batch_response(raw, expected_count=1)
+        assert (
+            result[0]["why_it_matters"] == "Cuts inference cost for small deployments."
+        )
+        assert result[0]["topics"] == ["NLP"]
+
+    def test_recovery_does_not_double_count_nested_objects(self):
+        """A nested dict inside a recovered object must not become its own entry."""
+        raw = '[0]\n{"index": 0, "extra": {"nested": true}}\n[1]\n{"index": 1}'
+        result = parse_batch_response(raw, expected_count=2)
+        assert len(result) == 2
+        assert result[0]["extra"] == {"nested": True}
+
+    def test_recovery_logs_warning(self, caplog):
+        """Silent recovery would hide model drift — it must be visible in logs."""
+        raw = '[0]\n{"index": 0}'
+        with caplog.at_level(logging.WARNING):
+            parse_batch_response(raw, expected_count=1)
+        assert "recovered" in caplog.text.lower()
+
+    def test_warns_when_fewer_results_than_expected(self, caplog):
+        """Partial batches silently lose articles — surface the shortfall."""
+        data = [{"index": 0}]
+        with caplog.at_level(logging.WARNING):
+            parse_batch_response(json.dumps(data), expected_count=5)
+        assert "5" in caplog.text
+
+    def test_returns_empty_when_nothing_recoverable(self):
+        result = parse_batch_response("no json here { broken", expected_count=2)
+        assert result == []
 
 
 # ---------------------------------------------------------------------------
