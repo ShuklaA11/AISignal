@@ -60,6 +60,8 @@ def init_db(database_url: str | None = None) -> None:
 
             alembic_cfg = Config(str(alembic_dir.parent / "alembic.ini"))
             alembic_cfg.set_main_option("sqlalchemy.url", str(engine.url))
+            # Leave the caller's logging alone — see alembic/env.py.
+            alembic_cfg.attributes["configure_logger"] = False
             command.upgrade(alembic_cfg, "head")
             return
         except Exception as e:

@@ -7,23 +7,46 @@ from alembic import context
 
 # Import all models so SQLModel.metadata is populated
 from src.storage.models import (  # noqa: F401
-    Article, ArticleEmbedding, ArticleSummary, Digest, DigestArticle,
-    DigestClick, FeedImpression, FetchRun, ReadArticle, SavedArticle,
-    ScoringMetric, Source, Token, User, UserEmbeddingModel, UserMLProfile,
+    Article,
+    ArticleEmbedding,
+    ArticleSummary,
+    Digest,
+    DigestArticle,
+    DigestClick,
+    FeedImpression,
+    FetchRun,
+    ReadArticle,
+    SavedArticle,
+    ScoringMetric,
+    Source,
+    Token,
+    User,
+    UserEmbeddingModel,
+    UserMLProfile,
 )
 
 config = context.config
 
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+# Only configure logging when Alembic owns the process (the `alembic` CLI).
+# Callers that drive Alembic programmatically — init_db() at the start of every
+# pipeline script — set configure_logger=False so their own logging survives:
+# fileConfig() otherwise applies alembic.ini's root level of WARNING and
+# disables every logger that already exists, silencing the whole application.
+if config.config_file_name is not None and config.attributes.get(
+    "configure_logger", True
+):
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Use SQLModel's shared metadata for autogenerate support
 target_metadata = SQLModel.metadata
 
 # Override sqlalchemy.url from project config if not set via CLI
-if not config.get_main_option("sqlalchemy.url") or \
-   config.get_main_option("sqlalchemy.url") == "driver://user:pass@localhost/dbname":
+if (
+    not config.get_main_option("sqlalchemy.url")
+    or config.get_main_option("sqlalchemy.url") == "driver://user:pass@localhost/dbname"
+):
     from src.config import DATA_DIR
+
     config.set_main_option("sqlalchemy.url", f"sqlite:///{DATA_DIR / 'newsletter.db'}")
 
 
