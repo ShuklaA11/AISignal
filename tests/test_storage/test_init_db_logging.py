@@ -98,14 +98,30 @@ def test_cli_run_still_configures_logging_without_disabling_loggers(
         assert not logging.getLogger(name).disabled
 
 
-def test_init_db_opts_out_of_alembic_logging_config(tmp_path):
+def test_init_db_opts_out_on_fresh_database(tmp_path):
+    """A fresh database is stamped, not upgraded — the flag must be set there too."""
+    captured = {}
+
+    def fake_stamp(cfg, revision):
+        captured["configure_logger"] = cfg.attributes.get("configure_logger")
+
+    with patch("alembic.command.stamp", side_effect=fake_stamp):
+        init_db(f"sqlite:///{tmp_path / 'fresh.db'}")
+
+    assert captured["configure_logger"] is False
+
+
+def test_init_db_opts_out_on_existing_database(tmp_path):
     """init_db must set the flag, or the fix never reaches the pipeline scripts."""
+    url = f"sqlite:///{tmp_path / 'existing.db'}"
+    init_db(url)  # build it once so the second call takes the upgrade path
+
     captured = {}
 
     def fake_upgrade(cfg, revision):
         captured["configure_logger"] = cfg.attributes.get("configure_logger")
 
     with patch("alembic.command.upgrade", side_effect=fake_upgrade):
-        init_db(f"sqlite:///{tmp_path / 'init.db'}")
+        init_db(url)
 
     assert captured["configure_logger"] is False
