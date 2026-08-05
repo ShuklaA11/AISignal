@@ -22,13 +22,15 @@ jobs:
     timeout-minutes: 30
     env:
       # --- cloud providers (override the local Ollama defaults) ---
-      NEWSLETTER_LLM__PROVIDER: anthropic
-      NEWSLETTER_LLM__MODEL: claude-haiku-4-5-20251001
+      # gpt-5.4-mini, not gpt-5-mini: the latter rejects temperature != 1,
+      # and config.yaml sets 0.3.
+      NEWSLETTER_LLM__PROVIDER: openai
+      NEWSLETTER_LLM__MODEL: gpt-5.4-mini
       NEWSLETTER_EMBEDDING_MODEL: deepinfra/mixedbread-ai/mxbai-embed-large-v1
 
       # --- secrets (set under Settings > Secrets and variables > Actions) ---
       NEWSLETTER_SECRET_KEY: ${{ secrets.NEWSLETTER_SECRET_KEY }}
-      NEWSLETTER_ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      NEWSLETTER_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       DEEPINFRA_API_KEY: ${{ secrets.DEEPINFRA_API_KEY }}
 
       # --- email (Gmail SMTP) ---
