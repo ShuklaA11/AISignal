@@ -16,5 +16,18 @@ config/config.yaml
 .DS_Store
 *.log
 .pytest_cache/
+.coverage
 .claude/
+.codex/
 notebooks/
+
+# Local setup script that holds secret values while configuring the pipeline
+finish_setup.sh
+
+# Private planning docs (per CLAUDE.md repo hygiene)
+CLAUDE.md
+plan.md
+plan-*.md
+PLAN.md
+planning.md
+plans/
