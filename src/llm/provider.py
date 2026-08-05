@@ -21,6 +21,25 @@ DEFAULT_TIMEOUT = 600
 # Ollama health-check endpoint
 OLLAMA_BASE_URL = "http://localhost:11434"
 
+# Which Settings field holds the credential for each provider. Providers absent
+# from this map (ollama and anything local) need no key.
+_PROVIDER_KEY_FIELDS = {
+    "anthropic": "anthropic_api_key",
+    "openai": "openai_api_key",
+}
+
+
+def _select_api_key(settings, provider: str) -> str | None:
+    """Return the credential belonging to `provider`, never another one's.
+
+    Selecting by precedence instead of by provider sends the wrong key when
+    more than one is configured — the normal state while migrating providers.
+    """
+    field = _PROVIDER_KEY_FIELDS.get(provider)
+    if field is None:
+        return None
+    return getattr(settings, field, "") or None
+
 
 class LLMProvider:
     """LiteLLM-based LLM client with provider fallback and timeout handling.
@@ -31,13 +50,14 @@ class LLMProvider:
     """
 
     def __init__(self, settings: Settings):
+        self._settings = settings
         self._provider = settings.llm.provider
         self._model_name = settings.llm.model
         self.model = f"{self._provider}/{self._model_name}"
         self.fallbacks = [f"{fb.provider}/{fb.model}" for fb in settings.llm.fallbacks]
         self.temperature = settings.llm.temperature
         self.max_tokens = settings.llm.max_tokens_per_article
-        self.api_key = settings.anthropic_api_key or settings.openai_api_key or None
+        self.api_key = _select_api_key(settings, self._provider)
 
     # ------------------------------------------------------------------
     # Runtime model switching
@@ -47,6 +67,8 @@ class LLMProvider:
         self._provider = provider
         self._model_name = model
         self.model = f"{provider}/{model}"
+        # Move the credential with the provider, not just the model id.
+        self.api_key = _select_api_key(self._settings, provider)
         logger.info(f"LLM model switched to {self.model}")
 
     @property
